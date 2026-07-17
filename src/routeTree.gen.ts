@@ -13,9 +13,9 @@ import { Route as StudentsRouteImport } from './routes/students'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PublishedRouteImport } from './routes/published'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as LessonsRouteImport } from './routes/lessons'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LessonsIndexRouteImport } from './routes/lessons.index'
 import { Route as LessonsIdRouteImport } from './routes/lessons.$id'
 import { Route as LessonSlugRouteImport } from './routes/lesson.$slug'
 
@@ -39,11 +39,6 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LessonsRoute = LessonsRouteImport.update({
-  id: '/lessons',
-  path: '/lessons',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -54,10 +49,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LessonsIndexRoute = LessonsIndexRouteImport.update({
+  id: '/lessons/',
+  path: '/lessons/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LessonsIdRoute = LessonsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => LessonsRoute,
+  id: '/lessons/$id',
+  path: '/lessons/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const LessonSlugRoute = LessonSlugRouteImport.update({
   id: '/lesson/$slug',
@@ -68,82 +68,83 @@ const LessonSlugRoute = LessonSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/lessons': typeof LessonsRouteWithChildren
   '/login': typeof LoginRoute
   '/published': typeof PublishedRoute
   '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
+  '/lessons/': typeof LessonsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/lessons': typeof LessonsRouteWithChildren
   '/login': typeof LoginRoute
   '/published': typeof PublishedRoute
   '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
+  '/lessons': typeof LessonsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/dashboard': typeof DashboardRoute
-  '/lessons': typeof LessonsRouteWithChildren
   '/login': typeof LoginRoute
   '/published': typeof PublishedRoute
   '/settings': typeof SettingsRoute
   '/students': typeof StudentsRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
+  '/lessons/': typeof LessonsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/dashboard'
-    | '/lessons'
     | '/login'
     | '/published'
     | '/settings'
     | '/students'
     | '/lesson/$slug'
     | '/lessons/$id'
+    | '/lessons/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/dashboard'
-    | '/lessons'
     | '/login'
     | '/published'
     | '/settings'
     | '/students'
     | '/lesson/$slug'
     | '/lessons/$id'
+    | '/lessons'
   id:
     | '__root__'
     | '/'
     | '/dashboard'
-    | '/lessons'
     | '/login'
     | '/published'
     | '/settings'
     | '/students'
     | '/lesson/$slug'
     | '/lessons/$id'
+    | '/lessons/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DashboardRoute: typeof DashboardRoute
-  LessonsRoute: typeof LessonsRouteWithChildren
   LoginRoute: typeof LoginRoute
   PublishedRoute: typeof PublishedRoute
   SettingsRoute: typeof SettingsRoute
   StudentsRoute: typeof StudentsRoute
   LessonSlugRoute: typeof LessonSlugRoute
+  LessonsIdRoute: typeof LessonsIdRoute
+  LessonsIndexRoute: typeof LessonsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -176,13 +177,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lessons': {
-      id: '/lessons'
-      path: '/lessons'
-      fullPath: '/lessons'
-      preLoaderRoute: typeof LessonsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -197,12 +191,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lessons/': {
+      id: '/lessons/'
+      path: '/lessons'
+      fullPath: '/lessons/'
+      preLoaderRoute: typeof LessonsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lessons/$id': {
       id: '/lessons/$id'
-      path: '/$id'
+      path: '/lessons/$id'
       fullPath: '/lessons/$id'
       preLoaderRoute: typeof LessonsIdRouteImport
-      parentRoute: typeof LessonsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/lesson/$slug': {
       id: '/lesson/$slug'
@@ -214,26 +215,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface LessonsRouteChildren {
-  LessonsIdRoute: typeof LessonsIdRoute
-}
-
-const LessonsRouteChildren: LessonsRouteChildren = {
-  LessonsIdRoute: LessonsIdRoute,
-}
-
-const LessonsRouteWithChildren =
-  LessonsRoute._addFileChildren(LessonsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DashboardRoute: DashboardRoute,
-  LessonsRoute: LessonsRouteWithChildren,
   LoginRoute: LoginRoute,
   PublishedRoute: PublishedRoute,
   SettingsRoute: SettingsRoute,
   StudentsRoute: StudentsRoute,
   LessonSlugRoute: LessonSlugRoute,
+  LessonsIdRoute: LessonsIdRoute,
+  LessonsIndexRoute: LessonsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

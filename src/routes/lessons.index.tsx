@@ -29,7 +29,7 @@ import {
 import { useStore } from "@/lib/store";
 import { StatusBadge } from "./dashboard";
 
-export const Route = createFileRoute("/lessons")({
+export const Route = createFileRoute("/lessons/")({
   component: LessonsList,
 });
 
