@@ -22,26 +22,27 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const { lessons, activity, teacher, createLesson } = useStore();
+  const { lessons, submissions, teacher, createLesson } = useStore();
   const navigate = useNavigate();
 
   const published = lessons.filter((l) => l.status === "published");
   const totalVisits = lessons.reduce((a, l) => a + l.visits, 0);
-  const totalStudents = new Set(activity.map((a) => a.studentName)).size;
+  const totalStudents = new Set(submissions.map((s) => s.studentName)).size;
 
   const stats = [
     { label: "Total Lessons", value: lessons.length, icon: BookOpen, tone: "bg-primary/10 text-primary" },
     { label: "Published", value: published.length, icon: Globe, tone: "bg-[oklch(0.7_0.15_160)/15%] text-[oklch(0.45_0.15_160)] dark:text-[oklch(0.8_0.15_160)]" },
     { label: "Student Visits", value: totalVisits, icon: Eye, tone: "bg-[oklch(0.78_0.15_75)/20%] text-[oklch(0.5_0.15_75)] dark:text-[oklch(0.85_0.15_75)]" },
-    { label: "Total Students", value: totalStudents, icon: Users, tone: "bg-[oklch(0.65_0.2_25)/15%] text-[oklch(0.55_0.2_25)] dark:text-[oklch(0.8_0.15_25)]" },
+    { label: "Submissions", value: submissions.length, icon: Users, tone: "bg-[oklch(0.65_0.2_25)/15%] text-[oklch(0.55_0.2_25)] dark:text-[oklch(0.8_0.15_25)]" },
   ];
 
-  const onCreate = () => {
-    const l = createLesson();
-    navigate({ to: "/lessons/$id", params: { id: l.id } });
+  const onCreate = async () => {
+    const l = await createLesson();
+    if (l) navigate({ to: "/lessons/$id", params: { id: l.id } });
   };
 
   const recent = [...lessons].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 5);
+  const recentSubs = [...submissions].slice(0, 6);
 
   return (
     <TeacherLayout>
@@ -51,6 +52,9 @@ function Dashboard() {
             Welcome back, {teacher?.displayName?.split(" ")[0] || "Teacher"} 👋
           </p>
           <h1 className="mt-1 text-3xl font-bold tracking-tight">Your teaching hub</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {totalStudents} student{totalStudents === 1 ? "" : "s"} have engaged with your lessons.
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
@@ -131,36 +135,42 @@ function Dashboard() {
 
         <Card className="card-soft">
           <CardContent className="p-6">
-            <h2 className="text-lg font-semibold">Recent activity</h2>
-            {activity.length === 0 ? (
+            <h2 className="text-lg font-semibold">Recent submissions</h2>
+            {recentSubs.length === 0 ? (
               <div className="mt-6 flex flex-col items-center justify-center rounded-xl border border-dashed border-border py-10 text-center">
                 <div className="grid h-12 w-12 place-items-center rounded-full bg-accent">
                   <Users className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  Student completions will appear here.
+                  Student submissions will appear here.
                 </p>
               </div>
             ) : (
               <ul className="mt-4 space-y-3">
-                {activity.slice(0, 6).map((a) => {
-                  const lesson = lessons.find((l) => l.id === a.lessonId);
+                {recentSubs.map((s) => {
+                  const lesson = lessons.find((l) => l.id === s.lessonId);
                   return (
-                    <li key={a.id} className="flex items-center gap-3">
-                      <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
-                        {(a.studentName || "?")[0].toUpperCase()}
-                      </div>
-                      <div className="min-w-0 flex-1 text-sm">
-                        <div className="truncate">
-                          <span className="font-medium">{a.studentName}</span> finished{" "}
-                          <span className="text-muted-foreground">
-                            {lesson?.title ?? "a lesson"}
-                          </span>
+                    <li key={s.id}>
+                      <Link
+                        to="/students"
+                        className="flex items-center gap-3 rounded-lg -mx-2 px-2 py-1.5 hover:bg-accent/40"
+                      >
+                        <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary text-sm font-semibold">
+                          {(s.studentName || "?")[0].toUpperCase()}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(a.completedAt, { addSuffix: true })}
+                        <div className="min-w-0 flex-1 text-sm">
+                          <div className="truncate">
+                            <span className="font-medium">{s.studentName}</span>{" "}
+                            <span className="text-muted-foreground">
+                              {lesson?.title ?? "a lesson"}
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(s.submittedAt, { addSuffix: true })}
+                            {s.autoTotal ? ` · ${s.autoScore}/${s.autoTotal} auto` : ""}
+                          </div>
                         </div>
-                      </div>
+                      </Link>
                     </li>
                   );
                 })}
@@ -181,7 +191,7 @@ function EmptyLessons({ onCreate }: { onCreate: () => void }) {
       </div>
       <h3 className="mt-4 text-lg font-semibold">Create your first lesson</h3>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-        Drag in headings, quizzes, and interactive blocks. Publish with one click.
+        Drag in headings, quizzes, videos, and open-ended questions. Publish with one click.
       </p>
       <Button onClick={onCreate} className="mt-5">
         <Sparkles className="h-4 w-4" /> Create lesson

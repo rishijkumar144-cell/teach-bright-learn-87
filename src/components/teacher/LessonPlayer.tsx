@@ -12,7 +12,12 @@ import { Button } from "@/components/ui/button";
 import { MathPreview } from "./MathPreview";
 import { cn } from "@/lib/utils";
 
-const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric"]);
+const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open"]);
+
+export interface LessonAttemptResult {
+  studentName: string;
+  answers: Record<string, unknown>;
+}
 
 function hasAnswer(block: Block, value: unknown): boolean {
   switch (block.type) {
@@ -24,6 +29,7 @@ function hasAnswer(block: Block, value: unknown): boolean {
     case "checkbox":
       return Array.isArray(value) && (value as unknown[]).length > 0;
     case "short":
+    case "open":
       return typeof value === "string" && value.trim().length > 0;
     default:
       return true;
@@ -36,7 +42,7 @@ export function LessonPlayer({
   headerExtra,
 }: {
   lesson: Lesson;
-  onFinish?: (studentName: string) => void;
+  onFinish?: (result: LessonAttemptResult) => void | Promise<void>;
   headerExtra?: ReactNode;
 }) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -74,7 +80,7 @@ export function LessonPlayer({
     }
     setMissing(new Set());
     setDone(true);
-    onFinish?.(name);
+    onFinish?.({ studentName: name, answers });
   };
 
   if (nameGate) {
@@ -356,6 +362,20 @@ function BlockRender({
             onChange={(e) => onChange(e.target.value)}
             placeholder="Type your answer…"
           />
+        </QuestionCard>
+      );
+    case "open":
+      return (
+        <QuestionCard question={d.question} required={d.required} isMissing={isMissing}>
+          <Textarea
+            rows={5}
+            value={(value as string) ?? ""}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="Write a detailed answer — your teacher will read and grade it."
+          />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Open-ended · your teacher will review this answer.
+          </p>
         </QuestionCard>
       );
     case "numeric":

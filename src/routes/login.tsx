@@ -1,12 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "motion/react";
-import { GraduationCap, Mail, Lock, Sparkles } from "lucide-react";
+import { GraduationCap, Mail, Lock, Sparkles, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/login")({
@@ -14,31 +13,44 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { login } = useStore();
+  const { signIn, signUp } = useStore();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(true);
+  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
+    if (mode === "signup" && !displayName.trim()) {
+      toast.error("Please enter your name");
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      login(email, remember);
-      toast.success(mode === "signin" ? "Welcome back!" : "Account created");
-      navigate({ to: "/dashboard" });
-    }, 500);
+    const res =
+      mode === "signin"
+        ? await signIn(email, password)
+        : await signUp(email, password, displayName.trim());
+    setLoading(false);
+    if (res.error) {
+      toast.error(res.error);
+      return;
+    }
+    if (mode === "signup") {
+      toast.success("Account created — check your email to confirm.");
+    } else {
+      toast.success("Welcome back!");
+    }
+    navigate({ to: "/dashboard" });
   };
 
   return (
     <div className="grid min-h-screen bg-background lg:grid-cols-2">
-      {/* Marketing pane */}
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-primary via-primary to-[oklch(0.45_0.2_290)] lg:block">
         <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,white_1px,transparent_1px),radial-gradient(circle_at_80%_60%,white_1px,transparent_1px)] [background-size:40px_40px]" />
         <div className="relative flex h-full flex-col justify-between p-12 text-primary-foreground">
@@ -63,8 +75,8 @@ function LoginPage() {
             <div className="mt-8 space-y-3 text-sm">
               {[
                 "Drag-and-drop lesson builder",
-                "Accessibility-first typography and contrast",
-                "Share lessons via unique student URLs",
+                "Real backend — student submissions save automatically",
+                "Grade open-ended answers with feedback",
               ].map((t) => (
                 <div key={t} className="flex items-center gap-3">
                   <div className="grid h-6 w-6 place-items-center rounded-full bg-white/20">
@@ -81,7 +93,6 @@ function LoginPage() {
         </div>
       </div>
 
-      {/* Form pane */}
       <div className="flex items-center justify-center px-6 py-12 sm:px-12">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -104,6 +115,21 @@ function LoginPage() {
           </p>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-5">
+            {mode === "signup" && (
+              <div className="space-y-2">
+                <Label htmlFor="name">Your name</Label>
+                <div className="relative">
+                  <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    className="h-12 pl-10"
+                    placeholder="Ms. Rivera"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -120,18 +146,7 @@ function LoginPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                {mode === "signin" && (
-                  <button
-                    type="button"
-                    onClick={() => toast.info("Password reset link sent (demo)")}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </button>
-                )}
-              </div>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -145,17 +160,6 @@ function LoginPage() {
                 />
               </div>
             </div>
-
-            {mode === "signin" && (
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={remember}
-                  onCheckedChange={(v) => setRemember(v === true)}
-                  id="remember"
-                />
-                <span>Remember me on this device</span>
-              </label>
-            )}
 
             <Button type="submit" size="lg" className="h-12 w-full text-base" disabled={loading}>
               {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}

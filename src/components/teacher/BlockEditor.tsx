@@ -65,6 +65,7 @@ export const BLOCK_DEFS: BlockDef[] = [
   { type: "checkbox", label: "Checkbox (Multi)", icon: CheckSquare, group: "question", init: () => ({ question: "Select all prime numbers.", options: ["2", "4", "5", "9"], correct: [0, 2], explanation: "", required: false }) },
   { type: "truefalse", label: "True / False", icon: ToggleLeft, group: "question", init: () => ({ question: "A triangle has 3 sides.", correct: true, explanation: "", required: false }) },
   { type: "short", label: "Short Answer", icon: TextCursorInput, group: "question", init: () => ({ question: "Explain what a variable is.", answer: "", explanation: "", required: false }) },
+  { type: "open", label: "Open-ended", icon: MessageCircleQuestion, group: "question", init: () => ({ question: "Explain your reasoning in your own words.", required: false }) },
   { type: "numeric", label: "Numeric Answer", icon: Hash, group: "question", init: () => ({ question: "What is 12 + 15?", answer: 27, explanation: "", required: false }) },
   { type: "reflection", label: "Reflection", icon: MessageCircleQuestion, group: "content", init: () => ({ question: "What was the trickiest part for you?" }) },
   { type: "model3d", label: "3D Model", icon: Box, group: "interactive", init: () => ({ name: "Untitled Model", description: "", notes: "" }) },
@@ -559,6 +560,29 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
             className="mt-2"
           />
           <QuestionExtras d={d} onChange={onChange} />
+        </BlockShell>
+      );
+    case "open":
+      return (
+        <BlockShell icon={def.icon} label={def.label}>
+          <Textarea
+            value={d.question ?? ""}
+            onChange={(e) => onChange({ question: e.target.value })}
+            placeholder="Prompt for the student to write a long-form answer…"
+            rows={2}
+          />
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-border/70 bg-accent/30 p-3">
+            <div>
+              <div className="text-sm font-medium">Required</div>
+              <p className="text-xs text-muted-foreground">
+                Student must write something before submitting. You will grade it manually.
+              </p>
+            </div>
+            <Switch
+              checked={!!d.required}
+              onCheckedChange={(v) => onChange({ required: v })}
+            />
+          </div>
         </BlockShell>
       );
     case "numeric":
