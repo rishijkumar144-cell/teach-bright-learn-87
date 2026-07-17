@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Type,
@@ -10,7 +10,6 @@ import {
   TextCursorInput,
   Hash,
   ToggleLeft,
-  Calculator,
   Box,
   Lightbulb,
   Minus,
@@ -26,7 +25,13 @@ import {
   Copy,
   Info,
   Upload,
+  Sigma,
+  Sparkles,
+  SplitSquareVertical,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +48,7 @@ import { newBlockId } from "@/lib/store";
 import type { Block, BlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MathPreview } from "./MathPreview";
+import { generateDiagram } from "@/lib/ai.functions";
 
 interface BlockDef {
   type: BlockType;
@@ -58,14 +64,14 @@ export const BLOCK_DEFS: BlockDef[] = [
   { type: "summary", label: "Summary", icon: BookmarkCheck, group: "content", init: () => ({ text: "Key takeaways from this section." }) },
   { type: "hint", label: "Hint", icon: Lightbulb, group: "content", init: () => ({ text: "Try breaking the problem into smaller steps." }) },
   { type: "divider", label: "Divider", icon: Minus, group: "layout", init: () => ({}) },
+  { type: "split", label: "Page break", icon: SplitSquareVertical, group: "layout", init: () => ({ label: "Continue" }) },
   { type: "image", label: "Image", icon: ImageIcon, group: "media", init: () => ({ url: "", caption: "" }) },
   { type: "video", label: "Video", icon: Video, group: "media", init: () => ({ url: "", caption: "" }) },
-  { type: "math", label: "Math Equation", icon: Calculator, group: "content", init: () => ({ equation: "a^2 + b^2 = c^2" }) },
   { type: "mcq", label: "Multiple Choice", icon: ListChecks, group: "question", init: () => ({ question: "What is 8 × 7?", options: ["54", "56", "64", "48"], correct: 1, explanation: "", required: false }) },
   { type: "checkbox", label: "Checkbox (Multi)", icon: CheckSquare, group: "question", init: () => ({ question: "Select all prime numbers.", options: ["2", "4", "5", "9"], correct: [0, 2], explanation: "", required: false }) },
   { type: "truefalse", label: "True / False", icon: ToggleLeft, group: "question", init: () => ({ question: "A triangle has 3 sides.", correct: true, explanation: "", required: false }) },
   { type: "short", label: "Short Answer", icon: TextCursorInput, group: "question", init: () => ({ question: "Explain what a variable is.", answer: "", explanation: "", required: false }) },
-  { type: "open", label: "Open-ended", icon: MessageCircleQuestion, group: "question", init: () => ({ question: "Explain your reasoning in your own words.", required: false }) },
+  { type: "open", label: "Open-ended", icon: MessageCircleQuestion, group: "question", init: () => ({ question: "Explain your reasoning in your own words.", explanation: "", required: false }) },
   { type: "numeric", label: "Numeric Answer", icon: Hash, group: "question", init: () => ({ question: "What is 12 + 15?", answer: 27, explanation: "", required: false }) },
   { type: "reflection", label: "Reflection", icon: MessageCircleQuestion, group: "content", init: () => ({ question: "What was the trickiest part for you?" }) },
   { type: "model3d", label: "3D Model", icon: Box, group: "interactive", init: () => ({ name: "Untitled Model", description: "", notes: "" }) },
@@ -328,11 +334,9 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "paragraph":
       return (
         <BlockShell icon={def.icon} label={def.label}>
-          <Textarea
-            value={d.text ?? ""}
-            onChange={(e) => onChange({ text: e.target.value })}
-            placeholder="Write your paragraph…"
-            rows={3}
+          <ParagraphEditor
+            value={(d.text as string) ?? ""}
+            onChange={(text) => onChange({ text })}
           />
         </BlockShell>
       );
@@ -363,6 +367,11 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
         </BlockShell>
       );
     case "image":
+      return (
+        <BlockShell icon={def.icon} label={def.label}>
+          <ImageBlockEditor d={d} onChange={onChange} />
+        </BlockShell>
+      );
     case "video":
       return (
         <BlockShell icon={def.icon} label={def.label}>
@@ -370,39 +379,47 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
             <Input
               value={d.url ?? ""}
               onChange={(e) => onChange({ url: e.target.value })}
-              placeholder={block.type === "image" ? "https://…/image.jpg" : "https://…/video.mp4 or YouTube URL"}
+              placeholder="https://…/video.mp4 or YouTube URL"
             />
             <Input
               value={d.caption ?? ""}
               onChange={(e) => onChange({ caption: e.target.value })}
               placeholder="Optional caption"
             />
-            {d.url && block.type === "image" && (
-              <img
-                src={d.url}
-                alt={d.caption || ""}
-                className="mt-2 max-h-60 rounded-xl border border-border object-cover"
+          </div>
+        </BlockShell>
+      );
+    case "split":
+      return (
+        <BlockShell icon={def.icon} label={def.label}>
+          <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3">
+            <div className="text-sm font-medium">Page break</div>
+            <p className="text-xs text-muted-foreground">
+              Everything after this block starts a new page. Students must complete this page
+              before they can move on.
+            </p>
+            <div className="mt-2">
+              <Label className="text-xs">Next-page button label</Label>
+              <Input
+                value={(d.label as string) ?? ""}
+                onChange={(e) => onChange({ label: e.target.value })}
+                placeholder="Continue"
               />
-            )}
+            </div>
           </div>
         </BlockShell>
       );
     case "math":
       return (
         <BlockShell icon={def.icon} label={def.label}>
-          <Input
-            value={d.equation ?? ""}
-            onChange={(e) => onChange({ equation: e.target.value })}
-            placeholder="e.g. a^2 + b^2 = c^2"
-            className="font-mono"
-          />
-          <div className="mt-2 min-h-[64px] rounded-xl bg-accent/60 p-4 text-center">
+          <div className="rounded-xl border border-dashed border-border bg-accent/30 p-3 text-xs text-muted-foreground">
+            The standalone Math block is deprecated. Use a Paragraph block and click the{" "}
+            <Sigma className="inline h-3 w-3" /> button to insert inline equations with{" "}
+            <code className="font-mono">$…$</code>.
+          </div>
+          <div className="mt-2 min-h-[48px] rounded-xl bg-accent/60 p-3 text-center">
             <MathPreview equation={d.equation ?? ""} />
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Live LaTeX preview · e.g. <code className="font-mono">\frac{'{a}{b}'}</code>,{" "}
-            <code className="font-mono">\sqrt{'{x}'}</code>
-          </p>
         </BlockShell>
       );
     case "mcq":
@@ -571,11 +588,21 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
             placeholder="Prompt for the student to write a long-form answer…"
             rows={2}
           />
+          <div className="mt-3">
+            <Label className="text-xs">Sample solution (shown after they submit)</Label>
+            <Textarea
+              rows={3}
+              value={(d.explanation as string) ?? ""}
+              onChange={(e) => onChange({ explanation: e.target.value })}
+              placeholder="A model answer or key points the student can compare to…"
+            />
+          </div>
           <div className="mt-3 flex items-center justify-between rounded-xl border border-border/70 bg-accent/30 p-3">
             <div>
               <div className="text-sm font-medium">Required</div>
               <p className="text-xs text-muted-foreground">
-                Student must write something before submitting. You will grade it manually.
+                Student must write and submit an answer before they can move on. You will grade
+                it manually.
               </p>
             </div>
             <Switch
@@ -710,4 +737,175 @@ export function AddBlockPopover({ onAdd }: { onAdd: (t: BlockType) => void }) {
 export function makeBlock(type: BlockType): Block {
   const def = BLOCK_DEFS.find((d) => d.type === type)!;
   return { id: newBlockId(), type, data: def.init() };
+}
+
+function ParagraphEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (text: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const insertEquation = () => {
+    const ta = ref.current;
+    const snippet = "$a^2 + b^2 = c^2$";
+    if (!ta) {
+      onChange((value ?? "") + " " + snippet);
+      return;
+    }
+    const start = ta.selectionStart ?? value.length;
+    const end = ta.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + snippet + value.slice(end);
+    onChange(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + 1;
+      ta.setSelectionRange(pos, pos + snippet.length - 2);
+    });
+  };
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={insertEquation}
+          className="h-8"
+        >
+          <Sigma className="h-3.5 w-3.5" /> Insert equation
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          Wrap LaTeX in <code className="font-mono">$…$</code> for inline math.
+        </span>
+      </div>
+      <Textarea
+        ref={ref}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Write your paragraph… use $x^2$ for inline equations."
+        rows={4}
+      />
+      {value.includes("$") && (
+        <div className="mt-2 rounded-xl border border-border bg-accent/30 p-3 text-sm">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Preview
+          </div>
+          <ParagraphWithMath text={value} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ParagraphWithMath({ text }: { text: string }) {
+  const parts = (text ?? "").split(/(\$[^$\n]+\$)/g);
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (p.length >= 2 && p.startsWith("$") && p.endsWith("$")) {
+          return (
+            <MathPreview
+              key={i}
+              equation={p.slice(1, -1)}
+              displayMode={false}
+              className="mx-0.5"
+            />
+          );
+        }
+        return <span key={i}>{p}</span>;
+      })}
+    </>
+  );
+}
+
+function ImageBlockEditor({
+  d,
+  onChange,
+}: {
+  d: Record<string, any>;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  const [prompt, setPrompt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const generate = useServerFn(generateDiagram);
+
+  const run = async () => {
+    if (!prompt.trim() || busy) return;
+    setBusy(true);
+    try {
+      const res = await generate({ data: { prompt: prompt.trim() } });
+      onChange({ url: res.url, caption: d.caption || prompt.trim() });
+      toast.success("Diagram generated");
+      setAiOpen(false);
+      setPrompt("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate image");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Input
+        value={d.url ?? ""}
+        onChange={(e) => onChange({ url: e.target.value })}
+        placeholder="https://…/image.jpg — or generate one with AI below"
+      />
+      <Input
+        value={d.caption ?? ""}
+        onChange={(e) => onChange({ caption: e.target.value })}
+        placeholder="Optional caption"
+      />
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setAiOpen((v) => !v)}
+        >
+          <Sparkles className="h-4 w-4" /> Generate diagram with AI
+        </Button>
+      </div>
+      {aiOpen && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <Label className="text-xs">Describe the diagram you want</Label>
+          <Textarea
+            rows={2}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="e.g. A labeled diagram of the water cycle with arrows for evaporation, condensation, and precipitation."
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setAiOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
+              {busy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Generating…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" /> Generate
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+      {d.url && (
+        <img
+          src={d.url}
+          alt={d.caption || ""}
+          className="mt-2 max-h-60 rounded-xl border border-border object-cover"
+        />
+      )}
+    </div>
+  );
 }

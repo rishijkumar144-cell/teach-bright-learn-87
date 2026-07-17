@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Box, Lightbulb, MessageCircleQuestion, BookmarkCheck, AlertCircle } from "lucide-react";
+import { Box, Lightbulb, MessageCircleQuestion, BookmarkCheck, AlertCircle, ArrowRight, Lock } from "lucide-react";
 import { toast } from "sonner";
 import type { Block, Lesson } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
@@ -10,9 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { MathPreview } from "./MathPreview";
+import { ParagraphWithMath } from "./BlockEditor";
 import { cn } from "@/lib/utils";
 
 const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open"]);
+const SUBMITTABLE_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open"]);
 
 export interface LessonAttemptResult {
   studentName: string;
@@ -36,6 +38,20 @@ function hasAnswer(block: Block, value: unknown): boolean {
   }
 }
 
+function paginate(blocks: Block[]): Block[][] {
+  const pages: Block[][] = [[]];
+  for (const b of blocks) {
+    if (b.type === "split") {
+      pages.push([]);
+      // stash label on the previous page's split marker via a side channel? Keep split block on page end.
+      pages[pages.length - 2].push(b);
+    } else {
+      pages[pages.length - 1].push(b);
+    }
+  }
+  return pages.filter((p) => p.length > 0 || pages.length === 1);
+}
+
 export function LessonPlayer({
   lesson,
   onFinish,
@@ -46,10 +62,18 @@ export function LessonPlayer({
   headerExtra?: ReactNode;
 }) {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
   const [nameGate, setNameGate] = useState(lesson.requireStudentName);
   const [name, setName] = useState("");
   const [done, setDone] = useState(false);
   const [missing, setMissing] = useState<Set<string>>(new Set());
+  const [pageIdx, setPageIdx] = useState(0);
+
+  const pages = useMemo(() => paginate(lesson.blocks), [lesson.blocks]);
+  const currentPage = pages[pageIdx] ?? [];
+  const isLastPage = pageIdx >= pages.length - 1;
+  const splitBlock = currentPage.find((b) => b.type === "split");
+  const pageBlocks = currentPage.filter((b) => b.type !== "split");
 
   const questionBlocks = useMemo(
     () => lesson.blocks.filter((b) => QUESTION_TYPES.has(b.type)),
@@ -57,13 +81,33 @@ export function LessonPlayer({
   );
   const total = questionBlocks.length || 1;
   const answered = questionBlocks.filter((b) => hasAnswer(b, answers[b.id])).length;
-  const progress = questionBlocks.length
-    ? Math.round((answered / total) * 100)
-    : done
-      ? 100
-      : 0;
+  const progress = questionBlocks.length ? Math.round((answered / total) * 100) : done ? 100 : 0;
 
-  const handleSubmit = () => {
+  // Gate: on this page, every required question and every question with an
+  // explanation must be submitted before advancing.
+  const pageBlockers = pageBlocks.filter((b) => {
+    if (!SUBMITTABLE_TYPES.has(b.type)) return false;
+    const d = b.data as Record<string, unknown>;
+    if (d.required) return true;
+    // Also require submission for MCQ/checkbox/TF/short/numeric so students can't skip past the solution.
+    return b.type !== "open" ? true : false;
+  });
+  const pageComplete = pageBlockers.every((b) => submitted[b.id]);
+  const openRequiredMissing = pageBlocks.some((b) => {
+    const d = b.data as Record<string, unknown>;
+    return b.type === "open" && d.required && !submitted[b.id];
+  });
+
+  const handleNext = () => {
+    if (!pageComplete || openRequiredMissing) {
+      toast.error("Please submit all questions on this page before continuing.");
+      return;
+    }
+    setPageIdx((i) => Math.min(i + 1, pages.length - 1));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleFinish = () => {
     const missingIds = new Set<string>();
     for (const b of lesson.blocks) {
       const d = b.data as Record<string, unknown>;
@@ -71,16 +115,23 @@ export function LessonPlayer({
     }
     if (missingIds.size > 0) {
       setMissing(missingIds);
-      toast.error(
-        `Please answer ${missingIds.size} required question${missingIds.size > 1 ? "s" : ""}.`,
-      );
-      const first = document.getElementById(`block-${Array.from(missingIds)[0]}`);
-      first?.scrollIntoView({ behavior: "smooth", block: "center" });
+      toast.error(`Please answer ${missingIds.size} required question${missingIds.size > 1 ? "s" : ""}.`);
       return;
     }
     setMissing(new Set());
     setDone(true);
     onFinish?.({ studentName: name, answers });
+  };
+
+  const submitBlock = (b: Block) => {
+    if (!hasAnswer(b, answers[b.id])) {
+      const d = b.data as Record<string, unknown>;
+      if (d.required || b.type === "open") {
+        toast.error("Please answer before submitting.");
+        return;
+      }
+    }
+    setSubmitted((s) => ({ ...s, [b.id]: true }));
   };
 
   if (nameGate) {
@@ -125,15 +176,16 @@ export function LessonPlayer({
           </div>
           <h1 className="mt-4 text-3xl font-bold">Great work{name ? `, ${name}` : ""}!</h1>
           <p className="mt-2 text-muted-foreground">
-            You finished <span className="font-medium">{lesson.title}</span>. Your teacher will
-            see your completion.
+            You finished <span className="font-medium">{lesson.title}</span>. Your teacher will see your completion.
           </p>
           <Button
             className="mt-6"
             onClick={() => {
               setDone(false);
               setAnswers({});
+              setSubmitted({});
               setMissing(new Set());
+              setPageIdx(0);
             }}
           >
             Review the lesson
@@ -142,6 +194,8 @@ export function LessonPlayer({
       </div>
     );
   }
+
+  const splitLabel = ((splitBlock?.data as Record<string, unknown> | undefined)?.label as string) || "Continue";
 
   return (
     <div className="min-h-dvh bg-background">
@@ -152,11 +206,11 @@ export function LessonPlayer({
               <div className="truncate text-sm font-semibold">{lesson.title}</div>
               <div className="text-xs text-muted-foreground">
                 {lesson.subject} · {lesson.gradeLevel} · {lesson.estimatedTime} min
+                {pages.length > 1 && (
+                  <> · Page {pageIdx + 1} of {pages.length}</>
+                )}
                 {questionBlocks.length > 0 && (
-                  <>
-                    {" "}
-                    · {answered}/{questionBlocks.length} answered
-                  </>
+                  <> · {answered}/{questionBlocks.length} answered</>
                 )}
               </div>
             </div>
@@ -167,10 +221,10 @@ export function LessonPlayer({
       </div>
 
       <article className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
-        {lesson.description && (
+        {pageIdx === 0 && lesson.description && (
           <p className="text-lg leading-relaxed text-muted-foreground">{lesson.description}</p>
         )}
-        {lesson.blocks.map((b) => (
+        {pageBlocks.map((b) => (
           <div key={b.id} id={`block-${b.id}`}>
             <BlockRender
               block={b}
@@ -186,13 +240,34 @@ export function LessonPlayer({
                 }
               }}
               isMissing={missing.has(b.id)}
+              submitted={!!submitted[b.id]}
+              onSubmit={() => submitBlock(b)}
             />
           </div>
         ))}
         <div className="pt-6">
-          <Button size="lg" className="h-12 w-full text-base" onClick={handleSubmit}>
-            Submit lesson
-          </Button>
+          {!isLastPage ? (
+            <Button
+              size="lg"
+              className="h-12 w-full text-base"
+              onClick={handleNext}
+              disabled={!pageComplete}
+            >
+              {pageComplete ? (
+                <>
+                  {splitLabel} <ArrowRight className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" /> Submit answers to continue
+                </>
+              )}
+            </Button>
+          ) : (
+            <Button size="lg" className="h-12 w-full text-base" onClick={handleFinish}>
+              Submit lesson
+            </Button>
+          )}
         </div>
       </article>
     </div>
@@ -204,18 +279,26 @@ function BlockRender({
   value,
   onChange,
   isMissing,
+  submitted,
+  onSubmit,
 }: {
   block: Block;
   value: unknown;
   onChange: (v: unknown) => void;
   isMissing: boolean;
+  submitted: boolean;
+  onSubmit: () => void;
 }) {
   const d = block.data as Record<string, any>;
   switch (block.type) {
     case "heading":
       return <h2 className="text-2xl font-bold tracking-tight">{d.text}</h2>;
     case "paragraph":
-      return <p className="text-lg leading-relaxed">{d.text}</p>;
+      return (
+        <p className="text-lg leading-relaxed">
+          <ParagraphWithMath text={d.text ?? ""} />
+        </p>
+      );
     case "summary":
       return (
         <div className="flex gap-3 rounded-2xl border border-border bg-accent/50 p-4">
@@ -254,6 +337,8 @@ function BlockRender({
       );
     case "divider":
       return <hr className="border-border" />;
+    case "split":
+      return null;
     case "image":
       return d.url ? (
         <figure className="overflow-hidden rounded-2xl border border-border">
@@ -289,104 +374,200 @@ function BlockRender({
       );
     case "mcq":
       return (
-        <QuestionCard question={d.question} required={d.required} isMissing={isMissing} explanation={d.explanation} showExplanation={value != null}>
+        <QuestionCard
+          question={d.question}
+          required={d.required}
+          isMissing={isMissing}
+          explanation={d.explanation}
+          submitted={submitted}
+          onSubmit={onSubmit}
+          canSubmit={hasAnswer(block, value)}
+        >
           <RadioGroup
             value={value != null ? String(value) : undefined}
             onValueChange={(v) => onChange(Number(v))}
+            disabled={submitted}
             className="space-y-2"
           >
-            {(d.options as string[]).map((opt, i) => (
-              <label
-                key={i}
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 transition hover:bg-accent/50"
-              >
-                <RadioGroupItem value={String(i)} />
-                <span>{opt}</span>
-              </label>
-            ))}
+            {(d.options as string[]).map((opt, i) => {
+              const isCorrect = submitted && i === Number(d.correct);
+              const isChosenWrong = submitted && value === i && i !== Number(d.correct);
+              return (
+                <label
+                  key={i}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition",
+                    submitted && "cursor-default",
+                    isCorrect && "border-emerald-500/50 bg-emerald-500/10",
+                    isChosenWrong && "border-destructive/50 bg-destructive/10",
+                    !isCorrect && !isChosenWrong && "border-border hover:bg-accent/50",
+                  )}
+                >
+                  <RadioGroupItem value={String(i)} disabled={submitted} />
+                  <span>{opt}</span>
+                </label>
+              );
+            })}
           </RadioGroup>
         </QuestionCard>
       );
     case "checkbox": {
       const sel: number[] = Array.isArray(value) ? (value as number[]) : [];
+      const correct: number[] = Array.isArray(d.correct) ? (d.correct as number[]) : [];
       return (
-        <QuestionCard question={d.question} required={d.required} isMissing={isMissing} explanation={d.explanation} showExplanation={sel.length > 0}>
+        <QuestionCard
+          question={d.question}
+          required={d.required}
+          isMissing={isMissing}
+          explanation={d.explanation}
+          submitted={submitted}
+          onSubmit={onSubmit}
+          canSubmit={hasAnswer(block, value)}
+        >
           <div className="space-y-2">
-            {(d.options as string[]).map((opt, i) => (
-              <label
-                key={i}
-                className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 transition hover:bg-accent/50"
-              >
-                <Checkbox
-                  checked={sel.includes(i)}
-                  onCheckedChange={(v) => {
-                    const next = new Set(sel);
-                    if (v) next.add(i);
-                    else next.delete(i);
-                    onChange(Array.from(next));
-                  }}
-                />
-                <span>{opt}</span>
-              </label>
-            ))}
+            {(d.options as string[]).map((opt, i) => {
+              const isCorrect = submitted && correct.includes(i);
+              const isChosenWrong = submitted && sel.includes(i) && !correct.includes(i);
+              return (
+                <label
+                  key={i}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition",
+                    submitted && "cursor-default",
+                    isCorrect && "border-emerald-500/50 bg-emerald-500/10",
+                    isChosenWrong && "border-destructive/50 bg-destructive/10",
+                    !isCorrect && !isChosenWrong && "border-border hover:bg-accent/50",
+                  )}
+                >
+                  <Checkbox
+                    checked={sel.includes(i)}
+                    disabled={submitted}
+                    onCheckedChange={(v) => {
+                      const next = new Set(sel);
+                      if (v) next.add(i);
+                      else next.delete(i);
+                      onChange(Array.from(next));
+                    }}
+                  />
+                  <span>{opt}</span>
+                </label>
+              );
+            })}
           </div>
         </QuestionCard>
       );
     }
     case "truefalse":
       return (
-        <QuestionCard question={d.question} required={d.required} isMissing={isMissing} explanation={d.explanation} showExplanation={value != null}>
+        <QuestionCard
+          question={d.question}
+          required={d.required}
+          isMissing={isMissing}
+          explanation={d.explanation}
+          submitted={submitted}
+          onSubmit={onSubmit}
+          canSubmit={hasAnswer(block, value)}
+        >
           <RadioGroup
             value={value != null ? String(value) : undefined}
             onValueChange={(v) => onChange(v === "true")}
+            disabled={submitted}
             className="flex gap-3"
           >
-            {["true", "false"].map((v) => (
-              <label
-                key={v}
-                className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border p-4 font-medium transition hover:bg-accent/50"
-              >
-                <RadioGroupItem value={v} />
-                {v === "true" ? "True" : "False"}
-              </label>
-            ))}
+            {["true", "false"].map((v) => {
+              const val = v === "true";
+              const isCorrect = submitted && val === !!d.correct;
+              const isChosenWrong = submitted && value === val && val !== !!d.correct;
+              return (
+                <label
+                  key={v}
+                  className={cn(
+                    "flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border p-4 font-medium transition",
+                    submitted && "cursor-default",
+                    isCorrect && "border-emerald-500/50 bg-emerald-500/10",
+                    isChosenWrong && "border-destructive/50 bg-destructive/10",
+                    !isCorrect && !isChosenWrong && "border-border hover:bg-accent/50",
+                  )}
+                >
+                  <RadioGroupItem value={v} disabled={submitted} />
+                  {v === "true" ? "True" : "False"}
+                </label>
+              );
+            })}
           </RadioGroup>
         </QuestionCard>
       );
     case "short":
       return (
-        <QuestionCard question={d.question} required={d.required} isMissing={isMissing} explanation={d.explanation} showExplanation={typeof value === "string" && value.trim().length > 0}>
+        <QuestionCard
+          question={d.question}
+          required={d.required}
+          isMissing={isMissing}
+          explanation={d.explanation}
+          submitted={submitted}
+          onSubmit={onSubmit}
+          canSubmit={hasAnswer(block, value)}
+          extra={
+            submitted && d.answer ? (
+              <div className="mt-2 text-xs text-muted-foreground">
+                Sample answer: <span className="font-medium">{d.answer}</span>
+              </div>
+            ) : null
+          }
+        >
           <Textarea
             rows={3}
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Type your answer…"
+            disabled={submitted}
           />
         </QuestionCard>
       );
     case "open":
       return (
-        <QuestionCard question={d.question} required={d.required} isMissing={isMissing}>
+        <QuestionCard
+          question={d.question}
+          required={d.required}
+          isMissing={isMissing}
+          explanation={d.explanation}
+          submitted={submitted}
+          onSubmit={onSubmit}
+          canSubmit={hasAnswer(block, value)}
+          submitLabel="Submit answer"
+          footer={
+            <p className="mt-2 text-xs text-muted-foreground">
+              Open-ended · your teacher will read and grade this answer.
+            </p>
+          }
+        >
           <Textarea
             rows={5}
             value={(value as string) ?? ""}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Write a detailed answer — your teacher will read and grade it."
+            placeholder="Write a detailed answer…"
+            disabled={submitted}
           />
-          <p className="mt-2 text-xs text-muted-foreground">
-            Open-ended · your teacher will review this answer.
-          </p>
         </QuestionCard>
       );
     case "numeric":
       return (
-        <QuestionCard question={d.question} required={d.required} isMissing={isMissing} explanation={d.explanation} showExplanation={typeof value === "number" && !Number.isNaN(value)}>
+        <QuestionCard
+          question={d.question}
+          required={d.required}
+          isMissing={isMissing}
+          explanation={d.explanation}
+          submitted={submitted}
+          onSubmit={onSubmit}
+          canSubmit={hasAnswer(block, value)}
+        >
           <Input
             type="number"
             value={(value as number | undefined) ?? ""}
             onChange={(e) => onChange(Number(e.target.value))}
             className="h-12 text-lg"
             placeholder="Your answer"
+            disabled={submitted}
           />
         </QuestionCard>
       );
@@ -396,21 +577,7 @@ function BlockRender({
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Box className="h-4 w-4 text-primary" /> {d.name || "Interactive 3D Model"}
           </div>
-          {d.description && (
-            <p className="mt-1 text-sm text-muted-foreground">{d.description}</p>
-          )}
-          <div className="mt-4 grid place-items-center rounded-xl bg-gradient-to-br from-primary/10 to-accent p-10 text-center">
-            <Box className="h-10 w-10 text-primary" />
-            <div className="mt-2 text-sm font-medium">3D preview coming soon</div>
-          </div>
-          {d.notes && (
-            <div className="mt-4 rounded-xl border border-border bg-background/60 p-3 text-sm">
-              <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Notes
-              </div>
-              <p className="leading-relaxed">{d.notes}</p>
-            </div>
-          )}
+          {d.description && <p className="mt-1 text-sm text-muted-foreground">{d.description}</p>}
         </div>
       );
   }
@@ -422,14 +589,24 @@ function QuestionCard({
   required,
   isMissing,
   explanation,
-  showExplanation,
+  submitted,
+  onSubmit,
+  canSubmit,
+  submitLabel = "Submit",
+  extra,
+  footer,
 }: {
   question: string;
   children: ReactNode;
   required?: boolean;
   isMissing?: boolean;
   explanation?: string;
-  showExplanation?: boolean;
+  submitted?: boolean;
+  onSubmit?: () => void;
+  canSubmit?: boolean;
+  submitLabel?: string;
+  extra?: ReactNode;
+  footer?: ReactNode;
 }) {
   return (
     <div
@@ -450,15 +627,24 @@ function QuestionCard({
         )}
       </div>
       <div className="mt-4">{children}</div>
+      {footer}
       {isMissing && (
         <div className="mt-3 flex items-center gap-2 text-sm text-destructive">
           <AlertCircle className="h-4 w-4" /> This question is required.
         </div>
       )}
-      {showExplanation && explanation && (
+      {!submitted && onSubmit && (
+        <div className="mt-4">
+          <Button onClick={onSubmit} disabled={!canSubmit} size="sm">
+            {submitLabel}
+          </Button>
+        </div>
+      )}
+      {submitted && extra}
+      {submitted && explanation && (
         <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
-            Explanation
+            {submitLabel === "Submit answer" ? "Sample solution" : "Explanation"}
           </div>
           <p className="leading-relaxed">{explanation}</p>
         </div>
