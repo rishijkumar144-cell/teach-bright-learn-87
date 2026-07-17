@@ -74,7 +74,8 @@ export const BLOCK_DEFS: BlockDef[] = [
   { type: "open", label: "Open-ended", icon: MessageCircleQuestion, group: "question", init: () => ({ question: "Explain your reasoning in your own words.", explanation: "", required: false }) },
   { type: "numeric", label: "Numeric Answer", icon: Hash, group: "question", init: () => ({ question: "What is 12 + 15?", answer: 27, explanation: "", required: false }) },
   { type: "reflection", label: "Reflection", icon: MessageCircleQuestion, group: "content", init: () => ({ question: "What was the trickiest part for you?" }) },
-  { type: "model3d", label: "3D Model", icon: Box, group: "interactive", init: () => ({ name: "Untitled Model", description: "", notes: "" }) },
+  { type: "model2d", label: "2D Diagram (AI)", icon: ImageIcon, group: "interactive", init: () => ({ url: "", caption: "", prompt: "" }) },
+  { type: "interactive", label: "Interactive Diagram", icon: Box, group: "interactive", init: () => ({ prompt: "", spec: null, required: true }) },
 ];
 
 export function BlockPalette({ onAdd }: { onAdd: (type: BlockType) => void }) {
