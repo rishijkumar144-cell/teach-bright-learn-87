@@ -48,7 +48,7 @@ import { newBlockId } from "@/lib/store";
 import type { Block, BlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MathPreview } from "./MathPreview";
-import { generateDiagram } from "@/lib/ai.functions";
+import { generateDiagram, generateInteractive } from "@/lib/ai.functions";
 
 interface BlockDef {
   type: BlockType;
@@ -74,7 +74,8 @@ export const BLOCK_DEFS: BlockDef[] = [
   { type: "open", label: "Open-ended", icon: MessageCircleQuestion, group: "question", init: () => ({ question: "Explain your reasoning in your own words.", explanation: "", required: false }) },
   { type: "numeric", label: "Numeric Answer", icon: Hash, group: "question", init: () => ({ question: "What is 12 + 15?", answer: 27, explanation: "", required: false }) },
   { type: "reflection", label: "Reflection", icon: MessageCircleQuestion, group: "content", init: () => ({ question: "What was the trickiest part for you?" }) },
-  { type: "model3d", label: "3D Model", icon: Box, group: "interactive", init: () => ({ name: "Untitled Model", description: "", notes: "" }) },
+  { type: "model2d", label: "2D Diagram (AI)", icon: ImageIcon, group: "interactive", init: () => ({ url: "", caption: "", prompt: "" }) },
+  { type: "interactive", label: "Interactive Diagram", icon: Box, group: "interactive", init: () => ({ prompt: "", spec: null, required: true }) },
 ];
 
 export function BlockPalette({ onAdd }: { onAdd: (type: BlockType) => void }) {
@@ -631,49 +632,16 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
           <QuestionExtras d={d} onChange={onChange} />
         </BlockShell>
       );
-    case "model3d":
+    case "model2d":
       return (
         <BlockShell icon={def.icon} label={def.label}>
-          <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label className="text-xs">Model title</Label>
-                <Input
-                  value={d.name ?? ""}
-                  onChange={(e) => onChange({ name: e.target.value })}
-                  placeholder="e.g. Unit Cube"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Description</Label>
-                <Input
-                  value={d.description ?? ""}
-                  onChange={(e) => onChange({ description: e.target.value })}
-                  placeholder="Short description shown to students"
-                />
-              </div>
-            </div>
-            <div className="mt-4 grid place-items-center rounded-xl bg-gradient-to-br from-primary/10 to-accent p-10 text-center">
-              <Box className="h-10 w-10 text-primary" />
-              <div className="mt-2 text-sm font-medium">3D Preview area</div>
-              <Button size="sm" variant="outline" disabled className="mt-3">
-                <Upload className="h-4 w-4" /> Upload model (coming soon)
-              </Button>
-            </div>
-            <div className="mt-3">
-              <Label className="text-xs">Teacher notes</Label>
-              <Textarea
-                rows={3}
-                value={d.notes ?? ""}
-                onChange={(e) => onChange({ notes: e.target.value })}
-                placeholder="Guidance for students exploring this model…"
-              />
-            </div>
-            <div className="mt-3 flex items-start gap-2 rounded-lg bg-background/60 p-3 text-xs text-muted-foreground">
-              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              This will support interactive Three.js models in the future.
-            </div>
-          </div>
+          <Model2DBlockEditor d={d} onChange={onChange} />
+        </BlockShell>
+      );
+    case "interactive":
+      return (
+        <BlockShell icon={def.icon} label={def.label}>
+          <InteractiveBlockEditor d={d} onChange={onChange} />
         </BlockShell>
       );
   }
@@ -909,3 +877,269 @@ function ImageBlockEditor({
     </div>
   );
 }
+
+function Model2DBlockEditor({
+  d,
+  onChange,
+}: {
+  d: Record<string, any>;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  const [prompt, setPrompt] = useState((d.prompt as string) ?? "");
+  const [busy, setBusy] = useState(false);
+  const generate = useServerFn(generateDiagram);
+
+  const run = async () => {
+    if (!prompt.trim() || busy) return;
+    setBusy(true);
+    try {
+      const res = await generate({ data: { prompt: prompt.trim() } });
+      onChange({ url: res.url, prompt: prompt.trim(), caption: d.caption || prompt.trim() });
+      toast.success("2D diagram generated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+        <Sparkles className="h-4 w-4 text-primary" /> AI Diagram Chatbot
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Describe the 2D diagram you want and AI will draw it. Students see the finished image.
+      </p>
+      <Textarea
+        rows={3}
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="e.g. A labeled diagram of a plant cell with nucleus, chloroplasts, and cell wall."
+      />
+      <div className="mt-2 flex items-center gap-2">
+        <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
+          {busy ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
+          ) : (
+            <><Sparkles className="h-4 w-4" /> {d.url ? "Regenerate" : "Generate"}</>
+          )}
+        </Button>
+        <Input
+          value={d.caption ?? ""}
+          onChange={(e) => onChange({ caption: e.target.value })}
+          placeholder="Caption (optional)"
+          className="flex-1"
+        />
+      </div>
+      {d.url && (
+        <img
+          src={d.url}
+          alt={d.caption || ""}
+          className="mt-3 max-h-72 w-full rounded-xl border border-border object-contain bg-background"
+        />
+      )}
+    </div>
+  );
+}
+
+type BarSpec = {
+  kind: "bar-graph";
+  title: string;
+  instructions: string;
+  unit?: string;
+  max: number;
+  tolerance: number;
+  categories: Array<{ label: string; target: number }>;
+};
+
+function InteractiveBlockEditor({
+  d,
+  onChange,
+}: {
+  d: Record<string, any>;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  const [prompt, setPrompt] = useState((d.prompt as string) ?? "");
+  const [busy, setBusy] = useState(false);
+  const generate = useServerFn(generateInteractive);
+  const spec = d.spec as BarSpec | null;
+
+  const run = async () => {
+    if (!prompt.trim() || busy) return;
+    setBusy(true);
+    try {
+      const res = await generate({ data: { prompt: prompt.trim() } });
+      onChange({ spec: res.spec, prompt: prompt.trim() });
+      toast.success("Interactive diagram generated");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const updateSpec = (patch: Partial<BarSpec>) => {
+    if (!spec) return;
+    onChange({ spec: { ...spec, ...patch } });
+  };
+  const updateCategory = (i: number, patch: Partial<{ label: string; target: number }>) => {
+    if (!spec) return;
+    const cats = spec.categories.map((c, k) => (k === i ? { ...c, ...patch } : c));
+    onChange({ spec: { ...spec, categories: cats } });
+  };
+
+  return (
+    <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
+      <div className="mb-2 flex items-center gap-2 text-sm font-medium">
+        <Sparkles className="h-4 w-4 text-primary" /> AI Interactive Builder
+      </div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Describe an interactive diagram (currently: adjustable bar graphs). Students must adjust
+        the bars to match the target values before they can move on.
+      </p>
+      <Textarea
+        rows={3}
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder="e.g. Bar graph of average monthly rainfall in Seattle (Jan–Jun), students match the correct heights."
+      />
+      <div className="mt-2 flex items-center gap-2">
+        <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
+          {busy ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> Building…</>
+          ) : (
+            <><Sparkles className="h-4 w-4" /> {spec ? "Regenerate" : "Generate"}</>
+          )}
+        </Button>
+      </div>
+
+      {spec && (
+        <div className="mt-4 space-y-3 rounded-xl border border-border bg-background p-3">
+          <Input
+            value={spec.title}
+            onChange={(e) => updateSpec({ title: e.target.value })}
+            placeholder="Title"
+            className="font-semibold"
+          />
+          <Textarea
+            rows={2}
+            value={spec.instructions}
+            onChange={(e) => updateSpec({ instructions: e.target.value })}
+            placeholder="Instructions to students"
+          />
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <Label className="text-xs">Max</Label>
+              <Input
+                type="number"
+                value={spec.max}
+                onChange={(e) => updateSpec({ max: Number(e.target.value) })}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Unit</Label>
+              <Input
+                value={spec.unit ?? ""}
+                onChange={(e) => updateSpec({ unit: e.target.value })}
+                placeholder="cm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Tolerance ±</Label>
+              <Input
+                type="number"
+                value={spec.tolerance}
+                onChange={(e) => updateSpec({ tolerance: Number(e.target.value) })}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs">Bars (label &amp; target value)</Label>
+            {spec.categories.map((c, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input
+                  value={c.label}
+                  onChange={(e) => updateCategory(i, { label: e.target.value })}
+                  placeholder="Label"
+                />
+                <Input
+                  type="number"
+                  value={c.target}
+                  onChange={(e) => updateCategory(i, { target: Number(e.target.value) })}
+                  placeholder="Target"
+                  className="w-28"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() =>
+                    updateSpec({
+                      categories: spec.categories.filter((_, k) => k !== i),
+                    } as Partial<BarSpec>)
+                  }
+                  aria-label="Remove bar"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                updateSpec({
+                  categories: [...spec.categories, { label: "New", target: 0 }],
+                } as Partial<BarSpec>)
+              }
+            >
+              <Plus className="h-4 w-4" /> Add bar
+            </Button>
+          </div>
+          <div className="rounded-lg border border-border bg-accent/30 p-3">
+            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Preview (targets)
+            </div>
+            <BarGraphPreview spec={spec} />
+          </div>
+        </div>
+      )}
+
+      <div className="mt-3 flex items-center justify-between rounded-xl border border-border/70 bg-accent/30 p-3">
+        <div>
+          <div className="text-sm font-medium">Required to proceed</div>
+          <p className="text-xs text-muted-foreground">
+            Students must match every bar (within tolerance) before moving to the next page.
+          </p>
+        </div>
+        <Switch
+          checked={d.required !== false}
+          onCheckedChange={(v) => onChange({ required: v })}
+        />
+      </div>
+    </div>
+  );
+}
+
+function BarGraphPreview({ spec }: { spec: BarSpec }) {
+  const max = Math.max(spec.max, ...spec.categories.map((c) => c.target), 1);
+  return (
+    <div className="flex h-40 items-end gap-2">
+      {spec.categories.map((c, i) => (
+        <div key={i} className="flex flex-1 flex-col items-center gap-1">
+          <div className="text-[10px] text-muted-foreground">
+            {c.target}
+            {spec.unit ?? ""}
+          </div>
+          <div
+            className="w-full rounded-t bg-primary/70"
+            style={{ height: `${(c.target / max) * 100}%` }}
+          />
+          <div className="truncate text-[10px]">{c.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export type { BarSpec };

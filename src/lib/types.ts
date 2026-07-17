@@ -11,6 +11,8 @@ export type BlockType =
   | "open"
   | "math"
   | "model3d"
+  | "model2d"
+  | "interactive"
   | "hint"
   | "divider"
   | "summary"
