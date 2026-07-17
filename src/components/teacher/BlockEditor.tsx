@@ -48,7 +48,7 @@ import { newBlockId } from "@/lib/store";
 import type { Block, BlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MathPreview } from "./MathPreview";
-import { generateDiagram } from "@/lib/ai.functions";
+import { generateDiagram, generateInteractive } from "@/lib/ai.functions";
 
 interface BlockDef {
   type: BlockType;
