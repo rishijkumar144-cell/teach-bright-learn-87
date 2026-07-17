@@ -14,7 +14,8 @@ export type BlockType =
   | "hint"
   | "divider"
   | "summary"
-  | "reflection";
+  | "reflection"
+  | "split";
 
 export interface Block {
   id: string;
