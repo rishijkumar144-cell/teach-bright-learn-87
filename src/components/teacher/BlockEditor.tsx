@@ -23,15 +23,17 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   Copy,
-  Info,
   Upload,
   Sigma,
-  Sparkles,
   SplitSquareVertical,
-  Loader2,
+  BarChart3,
+  PieChart as PieIcon,
+  LineChart as LineIcon,
+  Table as TableIcon,
+  Grid3x3,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,7 +50,20 @@ import { newBlockId } from "@/lib/store";
 import type { Block, BlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MathPreview } from "./MathPreview";
-import { generateDiagram, generateInteractive } from "@/lib/ai.functions";
+import type {
+  DrawShape,
+  InteractiveSpec,
+  StaticKind,
+  StaticSpec,
+  ToolKind,
+} from "@/lib/charts";
+import { SLICE_COLORS, newId } from "@/lib/charts";
+import {
+  StaticChart,
+  InteractiveBarPreview,
+  InteractivePieVisual,
+  CoordinateGrid,
+} from "./Charts";
 
 interface BlockDef {
   type: BlockType;
@@ -74,8 +89,8 @@ export const BLOCK_DEFS: BlockDef[] = [
   { type: "open", label: "Open-ended", icon: MessageCircleQuestion, group: "question", init: () => ({ question: "Explain your reasoning in your own words.", explanation: "", required: false }) },
   { type: "numeric", label: "Numeric Answer", icon: Hash, group: "question", init: () => ({ question: "What is 12 + 15?", answer: 27, explanation: "", required: false }) },
   { type: "reflection", label: "Reflection", icon: MessageCircleQuestion, group: "content", init: () => ({ question: "What was the trickiest part for you?" }) },
-  { type: "model2d", label: "2D Diagram (AI)", icon: ImageIcon, group: "interactive", init: () => ({ url: "", caption: "", prompt: "" }) },
-  { type: "interactive", label: "Interactive Diagram", icon: Box, group: "interactive", init: () => ({ prompt: "", spec: null, required: true }) },
+  { type: "model2d", label: "2D Diagram", icon: BarChart3, group: "interactive", init: () => ({ spec: { kind: "bar", title: "New chart", categories: [{ label: "A", value: 3 }, { label: "B", value: 5 }, { label: "C", value: 2 }], max: 10, unit: "" } as StaticSpec, caption: "" }) },
+  { type: "interactive", label: "Interactive Diagram", icon: Grid3x3, group: "interactive", init: () => ({ spec: { kind: "bar", title: "Match the targets", instructions: "Drag each bar to match its target.", unit: "", max: 10, tolerance: 0, categories: [{ label: "A", target: 4 }, { label: "B", target: 7 }] } as InteractiveSpec, required: true }) },
 ];
 
 export function BlockPalette({ onAdd }: { onAdd: (type: BlockType) => void }) {
@@ -797,25 +812,16 @@ function ImageBlockEditor({
   d: Record<string, any>;
   onChange: (patch: Record<string, unknown>) => void;
 }) {
-  const [prompt, setPrompt] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
-  const generate = useServerFn(generateDiagram);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const run = async () => {
-    if (!prompt.trim() || busy) return;
-    setBusy(true);
-    try {
-      const res = await generate({ data: { prompt: prompt.trim() } });
-      onChange({ url: res.url, caption: d.caption || prompt.trim() });
-      toast.success("Diagram generated");
-      setAiOpen(false);
-      setPrompt("");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to generate image");
-    } finally {
-      setBusy(false);
+  const onUpload = (file: File) => {
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Image must be under 4MB");
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = () => onChange({ url: String(reader.result) });
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -823,7 +829,7 @@ function ImageBlockEditor({
       <Input
         value={d.url ?? ""}
         onChange={(e) => onChange({ url: e.target.value })}
-        placeholder="https://…/image.jpg — or generate one with AI below"
+        placeholder="https://…/image.jpg"
       />
       <Input
         value={d.caption ?? ""}
@@ -831,42 +837,21 @@ function ImageBlockEditor({
         placeholder="Optional caption"
       />
       <div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setAiOpen((v) => !v)}
-        >
-          <Sparkles className="h-4 w-4" /> Generate diagram with AI
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onUpload(f);
+            e.target.value = "";
+          }}
+        />
+        <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+          <Upload className="h-4 w-4" /> Upload image
         </Button>
       </div>
-      {aiOpen && (
-        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-          <Label className="text-xs">Describe the diagram you want</Label>
-          <Textarea
-            rows={2}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g. A labeled diagram of the water cycle with arrows for evaporation, condensation, and precipitation."
-          />
-          <div className="mt-2 flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setAiOpen(false)}>
-              Cancel
-            </Button>
-            <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
-              {busy ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Generating…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" /> Generate
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
       {d.url && (
         <img
           src={d.url}
@@ -878,6 +863,43 @@ function ImageBlockEditor({
   );
 }
 
+
+// ============================================================
+// Static (Model2D) chart editor
+// ============================================================
+
+const STATIC_KINDS: { kind: StaticKind; label: string; Icon: typeof BarChart3 }[] = [
+  { kind: "table", label: "Table", Icon: TableIcon },
+  { kind: "bar", label: "Bar graph", Icon: BarChart3 },
+  { kind: "pie", label: "Pie graph", Icon: PieIcon },
+  { kind: "line", label: "Line graph", Icon: LineIcon },
+  { kind: "lineplot", label: "Line plot", Icon: LineIcon },
+  { kind: "stemleaf", label: "Stem & leaf", Icon: TableIcon },
+  { kind: "coord", label: "Coordinate plane", Icon: Grid3x3 },
+  { kind: "image", label: "Upload image", Icon: ImageIcon },
+];
+
+function defaultStaticSpec(kind: StaticKind): StaticSpec {
+  switch (kind) {
+    case "image":
+      return { kind: "image", url: "", caption: "" };
+    case "table":
+      return { kind: "table", headers: ["Name", "Value"], rows: [["A", "10"], ["B", "20"]], caption: "" };
+    case "bar":
+      return { kind: "bar", title: "Bar graph", unit: "", max: 10, categories: [{ label: "A", value: 4 }, { label: "B", value: 7 }] };
+    case "pie":
+      return { kind: "pie", title: "Pie graph", slices: [{ label: "A", value: 40 }, { label: "B", value: 30 }, { label: "C", value: 30 }] };
+    case "line":
+      return { kind: "line", title: "Line graph", xLabel: "x", yLabel: "y", points: [{ x: 0, y: 0 }, { x: 1, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 5 }] };
+    case "lineplot":
+      return { kind: "lineplot", title: "Line plot", min: 0, max: 10, values: [2, 3, 3, 4, 5, 5, 5, 6] };
+    case "stemleaf":
+      return { kind: "stemleaf", title: "Stem & leaf", values: [12, 15, 18, 21, 24, 27, 33, 35] };
+    case "coord":
+      return { kind: "coord", title: "Coordinate plane", xMin: -5, xMax: 5, yMin: -5, yMax: 5, shapes: [] };
+  }
+}
+
 function Model2DBlockEditor({
   d,
   onChange,
@@ -885,182 +907,301 @@ function Model2DBlockEditor({
   d: Record<string, any>;
   onChange: (patch: Record<string, unknown>) => void;
 }) {
-  const [prompt, setPrompt] = useState((d.prompt as string) ?? "");
-  const [style, setStyle] = useState<"diagram" | "illustration" | "chart" | "infographic">(
-    (d.style as any) ?? "diagram",
-  );
-  const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<"ai" | "upload">(d.url && !d.prompt ? "upload" : "ai");
-  const fileRef = useRef<HTMLInputElement>(null);
-  const generate = useServerFn(generateDiagram);
-
-  const run = async () => {
-    if (!prompt.trim() || busy) return;
-    setBusy(true);
-    try {
-      const res = await generate({ data: { prompt: prompt.trim(), style } });
-      onChange({
-        url: res.url,
-        prompt: prompt.trim(),
-        style,
-        refinedPrompt: res.refinedPrompt,
-        caption: d.caption || prompt.trim(),
-      });
-      toast.success("2D diagram generated");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to generate");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onUpload = async (file: File) => {
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file (PNG, JPG, SVG, WebP, GIF).");
-      return;
-    }
-    if (file.size > 4 * 1024 * 1024) {
-      toast.error("Image is too large. Please pick a file under 4 MB.");
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      onChange({ url: dataUrl, prompt: "", refinedPrompt: "", caption: d.caption || file.name });
-      toast.success("Image uploaded");
-    };
-    reader.onerror = () => toast.error("Could not read that file.");
-    reader.readAsDataURL(file);
-  };
+  const spec: StaticSpec = (d.spec as StaticSpec) ?? defaultStaticSpec("bar");
+  const setSpec = (next: StaticSpec) => onChange({ spec: next });
+  const changeKind = (k: StaticKind) => setSpec(defaultStaticSpec(k));
 
   return (
-    <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
-      <div className="mb-3 flex items-center gap-1 rounded-lg bg-background p-1 text-sm">
-        <button
-          type="button"
-          onClick={() => setTab("ai")}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition",
-            tab === "ai" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Sparkles className="h-3.5 w-3.5" /> AI diagram
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab("upload")}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition",
-            tab === "upload" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Upload className="h-3.5 w-3.5" /> Upload image
-        </button>
+    <div className="space-y-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
+      <div>
+        <Label className="text-xs">Chart type</Label>
+        <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {STATIC_KINDS.map(({ kind, label, Icon }) => (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => changeKind(kind)}
+              className={cn(
+                "flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition",
+                spec.kind === kind
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-background text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" /> {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {tab === "ai" ? (
-        <>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Describe the diagram; AI rewrites your prompt into a detailed brief, then draws it.
-          </p>
-          <Textarea
-            rows={3}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g. A labeled diagram of a plant cell with nucleus, chloroplasts, and cell wall."
-          />
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {(["diagram", "illustration", "chart", "infographic"] as const).map((s) => (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setStyle(s)}
-                className={cn(
-                  "rounded-md border px-2 py-1.5 text-xs font-medium capitalize transition",
-                  style === s
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-border bg-background text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 flex items-center gap-2">
-            <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
-              {busy ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
-              ) : (
-                <><Sparkles className="h-4 w-4" /> {d.url ? "Regenerate" : "Generate"}</>
-              )}
-            </Button>
-            <Input
-              value={d.caption ?? ""}
-              onChange={(e) => onChange({ caption: e.target.value })}
-              placeholder="Caption (optional)"
-              className="flex-1"
-            />
-          </div>
-          {d.refinedPrompt && (
-            <details className="mt-2 text-xs text-muted-foreground">
-              <summary className="cursor-pointer">View AI's refined brief</summary>
-              <p className="mt-1 whitespace-pre-wrap rounded-md bg-background/60 p-2">
-                {d.refinedPrompt}
-              </p>
-            </details>
-          )}
-        </>
-      ) : (
-        <>
-          <p className="mb-3 text-xs text-muted-foreground">
-            Upload your own diagram or image. PNG, JPG, SVG, WebP or GIF up to 4&nbsp;MB.
-          </p>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onUpload(f);
-              e.target.value = "";
-            }}
-          />
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
-              <Upload className="h-4 w-4" /> {d.url ? "Replace image" : "Choose image"}
-            </Button>
-            <Input
-              value={d.caption ?? ""}
-              onChange={(e) => onChange({ caption: e.target.value })}
-              placeholder="Caption (optional)"
-              className="flex-1"
-            />
-          </div>
-        </>
-      )}
+      <StaticSpecEditor spec={spec} onChange={setSpec} />
 
-      {d.url && (
-        <img
-          src={d.url}
-          alt={d.caption || ""}
-          className="mt-3 max-h-72 w-full rounded-xl border border-border object-contain bg-background"
-        />
-      )}
+      <div className="rounded-lg border border-border bg-background p-3">
+        <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Preview</div>
+        <StaticChart spec={spec} />
+      </div>
+
+      <Input
+        value={d.caption ?? ""}
+        onChange={(e) => onChange({ caption: e.target.value })}
+        placeholder="Caption (optional)"
+      />
     </div>
   );
 }
 
+function StaticSpecEditor({ spec, onChange }: { spec: StaticSpec; onChange: (s: StaticSpec) => void }) {
+  switch (spec.kind) {
+    case "image":
+      return <StaticImageEditor spec={spec} onChange={onChange} />;
+    case "table":
+      return <StaticTableEditor spec={spec} onChange={onChange} />;
+    case "bar":
+      return <StaticBarEditor spec={spec} onChange={onChange} />;
+    case "pie":
+      return <StaticPieEditor spec={spec} onChange={onChange} />;
+    case "line":
+      return <StaticLineEditor spec={spec} onChange={onChange} />;
+    case "lineplot":
+      return <StaticLineplotEditor spec={spec} onChange={onChange} />;
+    case "stemleaf":
+      return <StaticStemLeafEditor spec={spec} onChange={onChange} />;
+    case "coord":
+      return <StaticCoordEditor spec={spec} onChange={onChange} />;
+  }
+}
 
-type BarSpec = {
-  kind: "bar-graph";
-  title: string;
-  instructions: string;
-  unit?: string;
-  max: number;
-  tolerance: number;
-  categories: Array<{ label: string; target: number }>;
-};
+function TitleField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Title" className="font-semibold" />;
+}
+
+function StaticImageEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "image" }>; onChange: (s: StaticSpec) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const upload = (f: File) => {
+    if (f.size > 4 * 1024 * 1024) return toast.error("Image must be under 4MB");
+    const r = new FileReader();
+    r.onload = () => onChange({ ...spec, url: String(r.result) });
+    r.readAsDataURL(f);
+  };
+  return (
+    <div className="space-y-2">
+      <Input value={spec.url} onChange={(e) => onChange({ ...spec, url: e.target.value })} placeholder="Image URL or upload" />
+      <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+      <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()}>
+        <Upload className="h-4 w-4" /> Upload
+      </Button>
+    </div>
+  );
+}
+
+function StaticTableEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "table" }>; onChange: (s: StaticSpec) => void }) {
+  const setHeader = (i: number, v: string) => onChange({ ...spec, headers: spec.headers.map((h, k) => k === i ? v : h) });
+  const setCell = (r: number, c: number, v: string) => onChange({ ...spec, rows: spec.rows.map((row, ri) => ri === r ? row.map((cell, ci) => ci === c ? v : cell) : row) });
+  const addRow = () => onChange({ ...spec, rows: [...spec.rows, spec.headers.map(() => "")] });
+  const addCol = () => onChange({ ...spec, headers: [...spec.headers, `Col ${spec.headers.length + 1}`], rows: spec.rows.map((r) => [...r, ""]) });
+  const removeRow = (r: number) => onChange({ ...spec, rows: spec.rows.filter((_, k) => k !== r) });
+  const removeCol = (c: number) => onChange({ ...spec, headers: spec.headers.filter((_, k) => k !== c), rows: spec.rows.map((r) => r.filter((_, k) => k !== c)) });
+  return (
+    <div className="space-y-2">
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">
+          <thead className="bg-accent/40">
+            <tr>
+              {spec.headers.map((h, i) => (
+                <th key={i} className="p-1">
+                  <div className="flex items-center gap-1">
+                    <Input value={h} onChange={(e) => setHeader(i, e.target.value)} className="h-8" />
+                    <Button variant="ghost" size="icon" onClick={() => removeCol(i)}><Trash2 className="h-3 w-3" /></Button>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {spec.rows.map((row, r) => (
+              <tr key={r}>
+                {spec.headers.map((_, c) => (
+                  <td key={c} className="p-1">
+                    <Input value={row[c] ?? ""} onChange={(e) => setCell(r, c, e.target.value)} className="h-8" />
+                  </td>
+                ))}
+                <td><Button variant="ghost" size="icon" onClick={() => removeRow(r)}><Trash2 className="h-3 w-3" /></Button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={addRow}><Plus className="h-4 w-4" /> Row</Button>
+        <Button variant="outline" size="sm" onClick={addCol}><Plus className="h-4 w-4" /> Column</Button>
+      </div>
+    </div>
+  );
+}
+
+function StaticBarEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "bar" }>; onChange: (s: StaticSpec) => void }) {
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <div><Label className="text-xs">Max</Label><Input type="number" value={spec.max ?? 10} onChange={(e) => onChange({ ...spec, max: Number(e.target.value) })} /></div>
+        <div><Label className="text-xs">Unit</Label><Input value={spec.unit ?? ""} onChange={(e) => onChange({ ...spec, unit: e.target.value })} /></div>
+      </div>
+      {spec.categories.map((c, i) => (
+        <div key={i} className="flex gap-2">
+          <Input value={c.label} onChange={(e) => onChange({ ...spec, categories: spec.categories.map((x, k) => k === i ? { ...x, label: e.target.value } : x) })} placeholder="Label" />
+          <Input type="number" value={c.value} onChange={(e) => onChange({ ...spec, categories: spec.categories.map((x, k) => k === i ? { ...x, value: Number(e.target.value) } : x) })} className="w-28" />
+          <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, categories: spec.categories.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={() => onChange({ ...spec, categories: [...spec.categories, { label: "New", value: 0 }] })}><Plus className="h-4 w-4" /> Bar</Button>
+    </div>
+  );
+}
+
+function StaticPieEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "pie" }>; onChange: (s: StaticSpec) => void }) {
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      {spec.slices.map((s, i) => (
+        <div key={i} className="flex gap-2">
+          <Input value={s.label} onChange={(e) => onChange({ ...spec, slices: spec.slices.map((x, k) => k === i ? { ...x, label: e.target.value } : x) })} placeholder="Label" />
+          <Input type="number" value={s.value} onChange={(e) => onChange({ ...spec, slices: spec.slices.map((x, k) => k === i ? { ...x, value: Number(e.target.value) } : x) })} className="w-24" placeholder="%" />
+          <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, slices: spec.slices.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={() => onChange({ ...spec, slices: [...spec.slices, { label: "New", value: 10 }] })}><Plus className="h-4 w-4" /> Slice</Button>
+    </div>
+  );
+}
+
+function StaticLineEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "line" }>; onChange: (s: StaticSpec) => void }) {
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <Input value={spec.xLabel ?? ""} onChange={(e) => onChange({ ...spec, xLabel: e.target.value })} placeholder="X axis label" />
+        <Input value={spec.yLabel ?? ""} onChange={(e) => onChange({ ...spec, yLabel: e.target.value })} placeholder="Y axis label" />
+      </div>
+      {spec.points.map((p, i) => (
+        <div key={i} className="flex gap-2">
+          <Input type="number" value={p.x} onChange={(e) => onChange({ ...spec, points: spec.points.map((x, k) => k === i ? { ...x, x: Number(e.target.value) } : x) })} placeholder="x" />
+          <Input type="number" value={p.y} onChange={(e) => onChange({ ...spec, points: spec.points.map((x, k) => k === i ? { ...x, y: Number(e.target.value) } : x) })} placeholder="y" />
+          <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, points: spec.points.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={() => onChange({ ...spec, points: [...spec.points, { x: 0, y: 0 }] })}><Plus className="h-4 w-4" /> Point</Button>
+    </div>
+  );
+}
+
+function StaticLineplotEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "lineplot" }>; onChange: (s: StaticSpec) => void }) {
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <div><Label className="text-xs">Min</Label><Input type="number" value={spec.min} onChange={(e) => onChange({ ...spec, min: Number(e.target.value) })} /></div>
+        <div><Label className="text-xs">Max</Label><Input type="number" value={spec.max} onChange={(e) => onChange({ ...spec, max: Number(e.target.value) })} /></div>
+      </div>
+      <Label className="text-xs">Values (comma separated)</Label>
+      <Input
+        value={spec.values.join(", ")}
+        onChange={(e) => onChange({ ...spec, values: e.target.value.split(/[,\s]+/).map(Number).filter((n) => !Number.isNaN(n)) })}
+      />
+    </div>
+  );
+}
+
+function StaticStemLeafEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "stemleaf" }>; onChange: (s: StaticSpec) => void }) {
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      <Label className="text-xs">Values (comma separated)</Label>
+      <Input
+        value={spec.values.join(", ")}
+        onChange={(e) => onChange({ ...spec, values: e.target.value.split(/[,\s]+/).map(Number).filter((n) => !Number.isNaN(n)) })}
+      />
+    </div>
+  );
+}
+
+function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "coord" }>; onChange: (s: StaticSpec) => void }) {
+  const [tool, setTool] = useState<ToolKind>("point");
+  const [scratch, setScratch] = useState<Array<{ x: number; y: number }>>([]);
+
+  const addShape = (s: DrawShape) => onChange({ ...spec, shapes: [...spec.shapes, s] });
+
+  const onClick = (x: number, y: number) => {
+    const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3 };
+    const n = [...scratch, { x, y }];
+    if (n.length < need[tool]) { setScratch(n); return; }
+    setScratch([]);
+    switch (tool) {
+      case "point": addShape({ type: "point", x, y }); break;
+      case "line": addShape({ type: "line", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y }); break;
+      case "parabola": addShape({ type: "parabola", hx: n[0].x, hy: n[0].y, px: n[1].x, py: n[1].y }); break;
+      case "circle": addShape({ type: "circle", cx: n[0].x, cy: n[0].y, rx: n[1].x, ry: n[1].y }); break;
+      case "ellipse": addShape({ type: "ellipse", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }); break;
+      case "hyperbola": addShape({ type: "hyperbola", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }); break;
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      <div className="grid grid-cols-4 gap-2">
+        {(["xMin", "xMax", "yMin", "yMax"] as const).map((k) => (
+          <div key={k}><Label className="text-xs">{k}</Label><Input type="number" value={spec[k]} onChange={(e) => onChange({ ...spec, [k]: Number(e.target.value) })} /></div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {(["point", "line", "parabola", "circle", "ellipse", "hyperbola"] as ToolKind[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => { setTool(t); setScratch([]); }}
+            className={cn("rounded-md border px-2 py-1 text-xs capitalize", tool === t ? "border-primary bg-primary/10 text-primary" : "border-border")}
+          >
+            {t}
+          </button>
+        ))}
+        <Button variant="outline" size="sm" onClick={() => { onChange({ ...spec, shapes: [] }); setScratch([]); }}><Trash2 className="h-4 w-4" /> Clear</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">Click on the grid to add {tool} ({scratch.length}/{({ point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3 } as Record<ToolKind, number>)[tool]} points).</p>
+      <CoordinateGrid xMin={spec.xMin} xMax={spec.xMax} yMin={spec.yMin} yMax={spec.yMax} shapes={spec.shapes} onClick={onClick} />
+    </div>
+  );
+}
+
+// ============================================================
+// Interactive editor
+// ============================================================
+
+const INTERACTIVE_KINDS: { kind: InteractiveSpec["kind"]; label: string; Icon: typeof BarChart3 }[] = [
+  { kind: "bar", label: "Drag bars", Icon: BarChart3 },
+  { kind: "pie", label: "Drag pie sectors", Icon: PieIcon },
+  { kind: "line", label: "Plot line graph", Icon: LineIcon },
+  { kind: "lineplot", label: "Plot line plot", Icon: LineIcon },
+  { kind: "coord", label: "Coordinate plane", Icon: Grid3x3 },
+  { kind: "fill-image", label: "Fill image labels", Icon: MapPin },
+];
+
+function defaultInteractiveSpec(kind: InteractiveSpec["kind"]): InteractiveSpec {
+  switch (kind) {
+    case "bar":
+      return { kind: "bar", title: "Match the bars", instructions: "Drag bars to targets.", max: 10, tolerance: 0.5, unit: "", categories: [{ label: "A", target: 4 }, { label: "B", target: 7 }] };
+    case "pie":
+      return { kind: "pie", title: "Adjust sectors", instructions: "Drag sector boundaries to match targets.", tolerance: 3, slices: [{ label: "A", target: 30 }, { label: "B", target: 45 }, { label: "C", target: 25 }] };
+    case "line":
+      return { kind: "line", title: "Plot the line", instructions: "Click to plot the required points.", xMin: 0, xMax: 10, yMin: 0, yMax: 10, tolerance: 0.5, targets: [{ x: 1, y: 2 }, { x: 3, y: 6 }, { x: 5, y: 8 }] };
+    case "lineplot":
+      return { kind: "lineplot", title: "Plot the values", instructions: "Click each value on the number line.", min: 0, max: 10, targets: [3, 5, 5, 7] };
+    case "coord":
+      return { kind: "coord", title: "Draw the shape", instructions: "Use the tools to draw.", xMin: -5, xMax: 5, yMin: -5, yMax: 5, tools: ["point", "line"], minShapes: 1 };
+    case "fill-image":
+      return { kind: "fill-image", title: "Label the diagram", instructions: "Fill in every label.", imageUrl: "", pins: [] };
+  }
+}
 
 function InteractiveBlockEditor({
   d,
@@ -1069,186 +1210,205 @@ function InteractiveBlockEditor({
   d: Record<string, any>;
   onChange: (patch: Record<string, unknown>) => void;
 }) {
-  const [prompt, setPrompt] = useState((d.prompt as string) ?? "");
-  const [busy, setBusy] = useState(false);
-  const generate = useServerFn(generateInteractive);
-  const spec = d.spec as BarSpec | null;
-
-  const run = async () => {
-    if (!prompt.trim() || busy) return;
-    setBusy(true);
-    try {
-      const res = await generate({ data: { prompt: prompt.trim() } });
-      onChange({ spec: res.spec, prompt: prompt.trim() });
-      toast.success("Interactive diagram generated");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed to generate");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const updateSpec = (patch: Partial<BarSpec>) => {
-    if (!spec) return;
-    onChange({ spec: { ...spec, ...patch } });
-  };
-  const updateCategory = (i: number, patch: Partial<{ label: string; target: number }>) => {
-    if (!spec) return;
-    const cats = spec.categories.map((c, k) => (k === i ? { ...c, ...patch } : c));
-    onChange({ spec: { ...spec, categories: cats } });
-  };
+  const spec: InteractiveSpec = (d.spec as InteractiveSpec) ?? defaultInteractiveSpec("bar");
+  const setSpec = (s: InteractiveSpec) => onChange({ spec: s });
 
   return (
-    <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
-      <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-        <Sparkles className="h-4 w-4 text-primary" /> AI Interactive Builder
-      </div>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Describe an interactive diagram (currently: adjustable bar graphs). Students must adjust
-        the bars to match the target values before they can move on.
-      </p>
-      <Textarea
-        rows={3}
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="e.g. Bar graph of average monthly rainfall in Seattle (Jan–Jun), students match the correct heights."
-      />
-      <div className="mt-2 flex items-center gap-2">
-        <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
-          {busy ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Building…</>
-          ) : (
-            <><Sparkles className="h-4 w-4" /> {spec ? "Regenerate" : "Generate"}</>
-          )}
-        </Button>
-      </div>
-
-      {spec && (
-        <div className="mt-4 space-y-3 rounded-xl border border-border bg-background p-3">
-          <Input
-            value={spec.title}
-            onChange={(e) => updateSpec({ title: e.target.value })}
-            placeholder="Title"
-            className="font-semibold"
-          />
-          <Textarea
-            rows={2}
-            value={spec.instructions}
-            onChange={(e) => updateSpec({ instructions: e.target.value })}
-            placeholder="Instructions to students"
-          />
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <Label className="text-xs">Max</Label>
-              <Input
-                type="number"
-                value={spec.max}
-                onChange={(e) => updateSpec({ max: Number(e.target.value) })}
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Unit</Label>
-              <Input
-                value={spec.unit ?? ""}
-                onChange={(e) => updateSpec({ unit: e.target.value })}
-                placeholder="cm"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Tolerance ±</Label>
-              <Input
-                type="number"
-                value={spec.tolerance}
-                onChange={(e) => updateSpec({ tolerance: Number(e.target.value) })}
-              />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Bars (label &amp; target value)</Label>
-            {spec.categories.map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Input
-                  value={c.label}
-                  onChange={(e) => updateCategory(i, { label: e.target.value })}
-                  placeholder="Label"
-                />
-                <Input
-                  type="number"
-                  value={c.target}
-                  onChange={(e) => updateCategory(i, { target: Number(e.target.value) })}
-                  placeholder="Target"
-                  className="w-28"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    updateSpec({
-                      categories: spec.categories.filter((_, k) => k !== i),
-                    } as Partial<BarSpec>)
-                  }
-                  aria-label="Remove bar"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                updateSpec({
-                  categories: [...spec.categories, { label: "New", target: 0 }],
-                } as Partial<BarSpec>)
-              }
+    <div className="space-y-3 rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
+      <div>
+        <Label className="text-xs">Interactive type</Label>
+        <div className="mt-1 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {INTERACTIVE_KINDS.map(({ kind, label, Icon }) => (
+            <button
+              key={kind}
+              type="button"
+              onClick={() => setSpec(defaultInteractiveSpec(kind))}
+              className={cn(
+                "flex items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition",
+                spec.kind === kind ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:text-foreground",
+              )}
             >
-              <Plus className="h-4 w-4" /> Add bar
-            </Button>
-          </div>
-          <div className="rounded-lg border border-border bg-accent/30 p-3">
-            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Preview (targets)
-            </div>
-            <BarGraphPreview spec={spec} />
-          </div>
+              <Icon className="h-3.5 w-3.5" /> {label}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
-      <div className="mt-3 flex items-center justify-between rounded-xl border border-border/70 bg-accent/30 p-3">
-        <div>
-          <div className="text-sm font-medium">Required to proceed</div>
-          <p className="text-xs text-muted-foreground">
-            Students must match every bar (within tolerance) before moving to the next page.
-          </p>
-        </div>
-        <Switch
-          checked={d.required !== false}
-          onCheckedChange={(v) => onChange({ required: v })}
-        />
+      <TitleField value={spec.title} onChange={(v) => setSpec({ ...spec, title: v } as InteractiveSpec)} />
+      <Textarea rows={2} value={spec.instructions} onChange={(e) => setSpec({ ...spec, instructions: e.target.value } as InteractiveSpec)} placeholder="Instructions to students" />
+
+      <InteractiveSpecEditor spec={spec} onChange={setSpec} />
+
+      <div className="flex items-center justify-between rounded-xl border border-border/70 bg-accent/30 p-3">
+        <div className="text-sm">Required to proceed</div>
+        <Switch checked={d.required !== false} onCheckedChange={(v) => onChange({ required: v })} />
       </div>
     </div>
   );
 }
 
-function BarGraphPreview({ spec }: { spec: BarSpec }) {
-  const max = Math.max(spec.max, ...spec.categories.map((c) => c.target), 1);
-  return (
-    <div className="flex h-40 items-end gap-2">
-      {spec.categories.map((c, i) => (
-        <div key={i} className="flex flex-1 flex-col items-center gap-1">
-          <div className="text-[10px] text-muted-foreground">
-            {c.target}
-            {spec.unit ?? ""}
+function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onChange: (s: InteractiveSpec) => void }) {
+  switch (spec.kind) {
+    case "bar":
+      return (
+        <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-2">
+            <div><Label className="text-xs">Max</Label><Input type="number" value={spec.max} onChange={(e) => onChange({ ...spec, max: Number(e.target.value) })} /></div>
+            <div><Label className="text-xs">Unit</Label><Input value={spec.unit ?? ""} onChange={(e) => onChange({ ...spec, unit: e.target.value })} /></div>
+            <div><Label className="text-xs">Tolerance ±</Label><Input type="number" value={spec.tolerance} onChange={(e) => onChange({ ...spec, tolerance: Number(e.target.value) })} /></div>
           </div>
-          <div
-            className="w-full rounded-t bg-primary/70"
-            style={{ height: `${(c.target / max) * 100}%` }}
+          {spec.categories.map((c, i) => (
+            <div key={i} className="flex gap-2">
+              <Input value={c.label} onChange={(e) => onChange({ ...spec, categories: spec.categories.map((x, k) => k === i ? { ...x, label: e.target.value } : x) })} />
+              <Input type="number" value={c.target} onChange={(e) => onChange({ ...spec, categories: spec.categories.map((x, k) => k === i ? { ...x, target: Number(e.target.value) } : x) })} className="w-24" />
+              <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, categories: spec.categories.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={() => onChange({ ...spec, categories: [...spec.categories, { label: "New", target: 0 }] })}><Plus className="h-4 w-4" /> Bar</Button>
+          <div className="rounded-lg border border-border bg-background p-3">
+            <div className="mb-1 text-xs text-muted-foreground">Target preview</div>
+            <InteractiveBarPreview categories={spec.categories} max={spec.max} unit={spec.unit} />
+          </div>
+        </div>
+      );
+    case "pie":
+      return (
+        <div className="space-y-2">
+          <div><Label className="text-xs">Tolerance ± (percent)</Label><Input type="number" value={spec.tolerance} onChange={(e) => onChange({ ...spec, tolerance: Number(e.target.value) })} /></div>
+          {spec.slices.map((s, i) => (
+            <div key={i} className="flex gap-2">
+              <Input value={s.label} onChange={(e) => onChange({ ...spec, slices: spec.slices.map((x, k) => k === i ? { ...x, label: e.target.value } : x) })} />
+              <Input type="number" value={s.target} onChange={(e) => onChange({ ...spec, slices: spec.slices.map((x, k) => k === i ? { ...x, target: Number(e.target.value) } : x) })} className="w-24" placeholder="%" />
+              <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, slices: spec.slices.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={() => onChange({ ...spec, slices: [...spec.slices, { label: "New", target: 10 }] })}><Plus className="h-4 w-4" /> Slice</Button>
+          <p className="text-xs text-muted-foreground">Percents should total 100.</p>
+          <div className="rounded-lg border border-border bg-background p-3">
+            <InteractivePieVisual values={spec.slices.map((s) => s.target)} labels={spec.slices.map((s) => s.label)} />
+          </div>
+        </div>
+      );
+    case "line":
+      return (
+        <div className="space-y-2">
+          <div className="grid grid-cols-5 gap-2">
+            {(["xMin", "xMax", "yMin", "yMax"] as const).map((k) => (
+              <div key={k}><Label className="text-xs">{k}</Label><Input type="number" value={spec[k]} onChange={(e) => onChange({ ...spec, [k]: Number(e.target.value) })} /></div>
+            ))}
+            <div><Label className="text-xs">Tolerance</Label><Input type="number" value={spec.tolerance} onChange={(e) => onChange({ ...spec, tolerance: Number(e.target.value) })} /></div>
+          </div>
+          <Label className="text-xs">Target points students must plot</Label>
+          {spec.targets.map((p, i) => (
+            <div key={i} className="flex gap-2">
+              <Input type="number" value={p.x} onChange={(e) => onChange({ ...spec, targets: spec.targets.map((x, k) => k === i ? { ...x, x: Number(e.target.value) } : x) })} placeholder="x" />
+              <Input type="number" value={p.y} onChange={(e) => onChange({ ...spec, targets: spec.targets.map((x, k) => k === i ? { ...x, y: Number(e.target.value) } : x) })} placeholder="y" />
+              <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, targets: spec.targets.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={() => onChange({ ...spec, targets: [...spec.targets, { x: 0, y: 0 }] })}><Plus className="h-4 w-4" /> Point</Button>
+        </div>
+      );
+    case "lineplot":
+      return (
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Min</Label><Input type="number" value={spec.min} onChange={(e) => onChange({ ...spec, min: Number(e.target.value) })} /></div>
+            <div><Label className="text-xs">Max</Label><Input type="number" value={spec.max} onChange={(e) => onChange({ ...spec, max: Number(e.target.value) })} /></div>
+          </div>
+          <Label className="text-xs">Target values (comma separated)</Label>
+          <Input
+            value={spec.targets.join(", ")}
+            onChange={(e) => onChange({ ...spec, targets: e.target.value.split(/[,\s]+/).map(Number).filter((n) => !Number.isNaN(n)) })}
           />
-          <div className="truncate text-[10px]">{c.label}</div>
+        </div>
+      );
+    case "coord":
+      return (
+        <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-2">
+            {(["xMin", "xMax", "yMin", "yMax"] as const).map((k) => (
+              <div key={k}><Label className="text-xs">{k}</Label><Input type="number" value={spec[k]} onChange={(e) => onChange({ ...spec, [k]: Number(e.target.value) })} /></div>
+            ))}
+          </div>
+          <Label className="text-xs">Tools students can use</Label>
+          <div className="flex flex-wrap gap-2">
+            {(["point", "line", "parabola", "circle", "ellipse", "hyperbola"] as ToolKind[]).map((t) => {
+              const on = spec.tools.includes(t);
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => onChange({ ...spec, tools: on ? spec.tools.filter((x) => x !== t) : [...spec.tools, t] })}
+                  className={cn("rounded-md border px-2 py-1 text-xs capitalize", on ? "border-primary bg-primary/10 text-primary" : "border-border")}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+          <div><Label className="text-xs">Minimum shapes required</Label><Input type="number" value={spec.minShapes} onChange={(e) => onChange({ ...spec, minShapes: Number(e.target.value) })} /></div>
+        </div>
+      );
+    case "fill-image":
+      return <FillImageEditor spec={spec} onChange={onChange} />;
+  }
+}
+
+function FillImageEditor({
+  spec,
+  onChange,
+}: {
+  spec: Extract<InteractiveSpec, { kind: "fill-image" }>;
+  onChange: (s: InteractiveSpec) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const upload = (f: File) => {
+    if (f.size > 4 * 1024 * 1024) return toast.error("Image must be under 4MB");
+    const r = new FileReader();
+    r.onload = () => onChange({ ...spec, imageUrl: String(r.result) });
+    r.readAsDataURL(f);
+  };
+  const addPin = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    onChange({ ...spec, pins: [...spec.pins, { id: newId(), x, y, answer: "" }] });
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input value={spec.imageUrl} onChange={(e) => onChange({ ...spec, imageUrl: e.target.value })} placeholder="Image URL" />
+        <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+        <Button variant="outline" size="sm" onClick={() => ref.current?.click()}><Upload className="h-4 w-4" /> Upload</Button>
+      </div>
+      {spec.imageUrl && (
+        <div className="relative inline-block cursor-crosshair overflow-hidden rounded-xl border border-border" onClick={addPin}>
+          <img src={spec.imageUrl} alt="" className="max-h-96 w-auto" />
+          {spec.pins.map((p, i) => (
+            <div
+              key={p.id}
+              className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground shadow"
+              style={{ left: `${p.x}%`, top: `${p.y}%` }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {i + 1}
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">Click on the image to place a label pin. Enter the expected answer for each pin below (leave blank to accept any non-empty answer).</p>
+      {spec.pins.map((p, i) => (
+        <div key={p.id} className="flex items-center gap-2">
+          <span className="w-6 text-center text-xs font-bold text-primary">{i + 1}</span>
+          <Input value={p.answer ?? ""} onChange={(e) => onChange({ ...spec, pins: spec.pins.map((x) => x.id === p.id ? { ...x, answer: e.target.value } : x) })} placeholder="Expected label (optional)" />
+          <Input value={p.hint ?? ""} onChange={(e) => onChange({ ...spec, pins: spec.pins.map((x) => x.id === p.id ? { ...x, hint: e.target.value } : x) })} placeholder="Hint (optional)" />
+          <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, pins: spec.pins.filter((x) => x.id !== p.id) })}><Trash2 className="h-4 w-4" /></Button>
         </div>
       ))}
     </div>
   );
 }
+// _unused kept to silence lint for imported icons intentionally reserved
+void SLICE_COLORS;
 
-export type { BarSpec };

@@ -1,61 +1,71 @@
-# Mathly: real backend + full editor + grading
+## Goal
 
-This turns the current local-storage prototype into a real product powered by Lovable Cloud (database + auth). Teachers sign in, build lessons that persist to the database, publish public links, and grade student submissions. Students open the public link, enter their name, work through the lesson, submit answers, and their results appear in the teacher's dashboard.
+Remove all AI. Replace with **structured chart builders** for teachers, plus **truly interactive versions** students manipulate. Also add a fill‑in‑the‑label mode for uploaded diagrams.
 
-## What you get
+## Cleanup
 
-**Real accounts & storage**
-- Sign in / sign up via Lovable Cloud auth (email + password, plus Google if you want).
-- Lessons, blocks, publishes, and student submissions live in a real database — no more losing work when you clear your browser.
+- Delete `src/lib/ai.functions.ts` and all imports/usages (`generateDiagram`, `generateInteractive`, "AI" tabs in editors, `Sparkles` UI).
+- Keep the `model2d` and `interactive` block types (rename in the palette only).
 
-**A working lesson editor**
-- Add blocks: heading, article/paragraph, image, video (YouTube/Vimeo embed URL), math expression, hint (collapsible), divider, summary, reflection.
-- Add questions: multiple choice, checkbox (multi-select), true/false, numeric, short answer, **open-ended (long text, teacher-graded)**.
-- Every question supports: prompt, options/correct answer, optional hint, optional solution/explanation shown after submit.
-- Autosave to database (debounced), reorder blocks, duplicate, delete.
+## Static "2D Diagram" block (`model2d`)
 
-**Public student lesson links**
-- Publish → get a shareable URL: `/lesson/<slug>`.
-- Student opens the link, enters their name (required when the teacher enabled it), works through the lesson, submits.
-- Auto-graded questions score instantly. Open-ended answers are stored for the teacher to grade.
+Teacher first picks a **kind**, then fills in data. Renders as SVG/HTML in the lesson.
 
-**Teacher dashboard & grading**
-- Students page shows completions per lesson, name, score, submission time.
-- Click a submission → see every answer, including open-ended text.
-- Grade open-ended answers with a score + optional feedback.
+Kinds:
 
-**Accessibility toolbar (top right)**
-- Floating control cluster next to the theme toggle:
-  - Light/Dark toggle (already done)
-  - Dyslexia-friendly font toggle
-  - Focus mode (hides non-essential chrome)
-  - Text size (Normal / Large / X-Large)
-  - Line spacing (Normal / Relaxed)
-  - Reduce motion toggle
-- Settings persist per device (localStorage) so students on the public lesson page can adjust for themselves.
+| Kind | Teacher inputs |
+| --- | --- |
+| `image` | Upload/URL + caption |
+| `table` | Column headers + rows |
+| `bar` | Categories: `{ label, value }[]`, y‑axis label, unit |
+| `pie` | Slices: `{ label, value }[]` |
+| `line` | Points `{ x, y }[]`, axis labels |
+| `lineplot` | Number line: min/max, values `number[]` (dots stack) |
+| `stemleaf` | Values `number[]` → auto stem/leaf table |
+| `coord` | Grid range xMin/xMax/yMin/yMax + optional pre‑drawn shapes (points, line segments) |
 
-## Technical shape
+Static renderers are SVG in a new file `src/components/teacher/Charts.tsx` shared with the interactive block.
 
-- Backend: Lovable Cloud (Supabase). Enable it in step 1.
-- Tables: `profiles`, `lessons`, `blocks` (ordered per lesson), `submissions` (one row per student attempt), `answers` (one row per question in a submission), `activity`.
-- RLS: teachers can only see/edit their own lessons and submissions to them. Public `SELECT` policy on published lessons + their blocks (no answers/solutions leaked). Students submit anonymously via a server function that writes with the admin client after validating the lesson is published.
-- Server functions handle: publish, load lesson for student, submit student attempt, list submissions, grade open-ended answer.
-- Autosave uses TanStack Query mutations with debounced flush.
-- Migrate the existing local-storage lessons into the database on first sign-in (best-effort import).
+## Interactive block (`interactive`)
 
-## Rollout order
+Teacher writes **title + instructions**, picks a **kind**, and configures the answer key. Student must satisfy the completion rule before the "Submit" button unlocks.
 
-1. Enable Lovable Cloud, add auth, create schema + RLS.
-2. Wire teacher auth flow (replace the fake login with real Supabase auth).
-3. Move lesson list + editor to the database (autosave).
-4. Extend block editor with the new block/question types + hints/solutions.
-5. Public student page: name gate, run lesson, submit answers.
-6. Teacher submissions view + open-ended grading UI.
-7. Accessibility toolbar top-right (theme + dyslexia + focus + text size + spacing + reduce motion).
+Kinds:
 
-## A few things to confirm before I start
+- **`fill-image`** — Upload/URL of an image. Teacher clicks on the image to drop label pins; each pin has an `expectedText` (optional; if blank, any non‑empty text counts). Student sees pins with empty text boxes; must fill every box.
+- **`bar`** — Existing bar‑drag with target + tolerance. Manually configured now (no AI generator).
+- **`pie`** — Slices with target percentages. Student drags slice boundaries around the circle. Complete when every slice is within tolerance.
+- **`line`** — Grid with target points. Student clicks to place points; must place one within tolerance of each target.
+- **`lineplot`** — Number line with target counts per value (e.g. `{3: 2, 4: 1}` = two dots on 3, one on 4). Student clicks the number line to stack dots.
+- **`coord`** — Free draw. Teacher enables which tools (point / line / parabola / circle / ellipse / hyperbola). Student picks a tool, clicks to place. Completion rule: teacher sets a minimum number of shapes (default 1). Actual correctness is teacher‑graded (shape data is saved on the submission and shown in the grading view).
 
-1. **Auth methods** — email/password only, or add Google sign-in too?
-2. **Existing local data** — should I try to import your current in-browser lessons into your account on first sign-in, or start fresh?
-3. **Open-ended grading scale** — points out of the question's max (e.g. `/5`), or a simple rubric (Needs work / Good / Excellent)?
-4. **Should any published lesson be viewable without a student name**, or is the name always required?
+### Fill‑image editor UX
+
+Image displayed at fixed aspect; clicking places a pin at normalized (x, y) coordinates. Sidebar lists pins with optional expected text. Student sees pin dots overlaid on image, each with a small text input beside it.
+
+### Data shapes (stored in block `data.spec`)
+
+Uses a discriminated union on `kind`. Existing `bar-graph` spec is kept and mapped to `kind: "bar"`.
+
+## Student player changes
+
+- `hasAnswer` handles every kind with kind‑specific completion checks.
+- The interactive renderer dispatches on `spec.kind`.
+- Non‑interactive `model2d` renders a static chart via `Charts.tsx`.
+
+## Files touched
+
+- **Delete:** `src/lib/ai.functions.ts`
+- **New:** `src/components/teacher/Charts.tsx` (SVG renderers shared by editor + player + grading)
+- **Rewrite:** `Model2DBlockEditor` and `InteractiveBlockEditor` in `src/components/teacher/BlockEditor.tsx`; add kind pickers + config forms; remove AI UI
+- **Update:** `src/components/teacher/LessonPlayer.tsx` — new dispatch for `model2d` and interactive kinds; new `hasAnswer` cases
+- **Update:** `src/routes/students.tsx` — show interactive answers (points, sectors, drawn shapes, filled labels) in the grading detail view (read‑only)
+- **Update:** `src/lib/types.ts` — leave block types; docs comment only
+
+## Scope notes
+
+- Conic drawing on the coordinate plane uses a **3‑click** interaction: for circle, click center then a point on the rim; for parabola, click vertex then one point; for ellipse/hyperbola, click center then two axis points. Rendered as SVG paths from those anchors — no equation editor.
+- Everything is deterministic and offline; no server calls.
+- Auto‑grading in `lesson.$slug.tsx` stays as is (only auto‑grades the objective question types); interactive completion is stored in `answers` for the teacher to review.
+
+Ready to build?
