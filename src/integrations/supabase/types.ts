@@ -159,7 +159,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      increment_lesson_visit: { Args: { _slug: string }; Returns: undefined }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
