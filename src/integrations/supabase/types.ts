@@ -14,13 +14,152 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      lessons: {
+        Row: {
+          blocks: Json
+          created_at: string
+          description: string
+          difficulty: string
+          estimated_time: number
+          grade_level: string
+          id: string
+          objectives: string
+          owner_id: string
+          published_at: string | null
+          require_student_name: boolean
+          slug: string
+          status: string
+          subject: string
+          thumbnail: string
+          title: string
+          updated_at: string
+          visits: number
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          description?: string
+          difficulty?: string
+          estimated_time?: number
+          grade_level?: string
+          id?: string
+          objectives?: string
+          owner_id: string
+          published_at?: string | null
+          require_student_name?: boolean
+          slug: string
+          status?: string
+          subject?: string
+          thumbnail?: string
+          title?: string
+          updated_at?: string
+          visits?: number
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          description?: string
+          difficulty?: string
+          estimated_time?: number
+          grade_level?: string
+          id?: string
+          objectives?: string
+          owner_id?: string
+          published_at?: string | null
+          require_student_name?: boolean
+          slug?: string
+          status?: string
+          subject?: string
+          thumbnail?: string
+          title?: string
+          updated_at?: string
+          visits?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          email: string
+          id: string
+          school: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string
+          email: string
+          id: string
+          school?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          email?: string
+          id?: string
+          school?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      submissions: {
+        Row: {
+          answers: Json
+          auto_score: number | null
+          auto_total: number | null
+          feedback: Json
+          graded_at: string | null
+          id: string
+          lesson_id: string
+          manual_score: number | null
+          manual_total: number | null
+          student_name: string
+          submitted_at: string
+        }
+        Insert: {
+          answers?: Json
+          auto_score?: number | null
+          auto_total?: number | null
+          feedback?: Json
+          graded_at?: string | null
+          id?: string
+          lesson_id: string
+          manual_score?: number | null
+          manual_total?: number | null
+          student_name?: string
+          submitted_at?: string
+        }
+        Update: {
+          answers?: Json
+          auto_score?: number | null
+          auto_total?: number | null
+          feedback?: Json
+          graded_at?: string | null
+          id?: string
+          lesson_id?: string
+          manual_score?: number | null
+          manual_total?: number | null
+          student_name?: string
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_lesson_visit: { Args: { _slug: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
