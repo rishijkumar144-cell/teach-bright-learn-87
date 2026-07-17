@@ -50,13 +50,14 @@ Return ONLY JSON matching this shape, no prose, no markdown fences:
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-3.1-pro-preview",
         messages: [
           { role: "system", content: planSystem },
           { role: "user", content: data.prompt },
         ],
         response_format: { type: "json_object" },
       }),
+
     });
 
     let plan: Record<string, unknown> | null = null;
