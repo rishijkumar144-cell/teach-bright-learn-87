@@ -15,46 +15,92 @@ export const generateDiagram = createServerFn({ method: "POST" })
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
 
-    // Step 1: use a strong chat model to rewrite the teacher's short prompt
-    // into a rich, education-focused image brief.
-    const briefResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const style = data.style ?? "diagram";
+
+    // Step 1: PLAN. A strong reasoning model analyses the teacher's request and
+    // produces a structured JSON plan: subject, learning goal, every part that
+    // must appear, the exact labels, spatial layout, color roles, and things to
+    // avoid. This gives the image model something concrete instead of a vibe.
+    const planSystem = `You are a senior instructional designer and scientific illustrator with expertise across biology, chemistry, physics, math, geography, history, and computer science. A teacher will give you a short request for a classroom ${style}. Think carefully about what a student actually needs to see to understand the concept, then output a strict JSON plan.
+
+Think about:
+- What is the underlying concept? What are common student misconceptions this image should NOT reinforce?
+- What is the correct scientific/mathematical structure? Names, proportions, directions, orderings, units.
+- What is the minimum set of parts to include? What labels are essential? Spell every label correctly.
+- How should parts be arranged spatially so the relationship is obvious at a glance?
+- What is a small, accessible color palette (2-5 colors) where color carries meaning (e.g. arteries red, veins blue)?
+
+Return ONLY JSON matching this shape, no prose, no markdown fences:
+{
+  "subject": string,
+  "learningGoal": string,
+  "gradeLevel": string,
+  "parts": [ { "name": string, "label": string, "role": string } ],
+  "layout": string,           // describe positions: "heart centered, aorta arching up-right, ..."
+  "arrows": string,           // any flow/direction arrows and what they show, or "none"
+  "palette": [ string ],      // 2-5 named colors with meaning, e.g. "red = oxygenated blood"
+  "avoid": [ string ],        // misconceptions or clutter to omit
+  "styleNotes": string        // extra visual guidance specific to this topic
+}`;
+
+    const planResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
-          {
-            role: "system",
-            content: `You are an expert instructional illustrator. Rewrite the teacher's short request into a single detailed prompt for an image generator to produce a clean, educational 2D ${data.style ?? "diagram"}.
-
-Requirements the prompt MUST enforce:
-- Flat 2D vector-style illustration. No 3D, no photorealism, no perspective tricks.
-- Clean thin outlines, high-contrast colors from a small palette (2-5 colors).
-- Plain white or very light background.
-- All labels rendered as crisp, correctly spelled English text with clear leader lines from each label to its part.
-- Anatomically / scientifically / mathematically accurate. Include every part the teacher asked for and no extraneous elements.
-- Centered composition, generous margins, no watermarks, no signatures, no borders.
-- Aspect ratio ~4:3, suitable to display in a lesson at moderate size.
-
-Return ONLY the final image prompt as plain text, no preamble, no quotes, no markdown.`,
-          },
+          { role: "system", content: planSystem },
           { role: "user", content: data.prompt },
         ],
+        response_format: { type: "json_object" },
       }),
     });
-    let refined = data.prompt;
-    if (briefResp.ok) {
-      const bj = (await briefResp.json()) as {
-        choices?: Array<{ message?: { content?: string } }>;
-      };
-      const c = bj?.choices?.[0]?.message?.content?.trim();
-      if (c && c.length > 20) refined = c;
+
+    let plan: Record<string, unknown> | null = null;
+    if (planResp.ok) {
+      try {
+        const pj = (await planResp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+        const raw = pj?.choices?.[0]?.message?.content ?? "";
+        const m = raw.match(/\{[\s\S]*\}/);
+        if (m) plan = JSON.parse(m[0]) as Record<string, unknown>;
+      } catch {
+        plan = null;
+      }
     }
 
-    // Step 2: generate the image with the higher-quality Nano Banana 2 model.
+    // Step 2: WRITE PROMPT. Compile the plan into a single dense image-gen
+    // prompt with rigid style rails.
+    const rails = `Flat 2D vector ${style}, clean thin outlines, small accessible color palette with meaning, plain off-white background, centered composition with generous margins, every label rendered as crisp correctly-spelled English text with thin leader lines to its part, scientifically accurate proportions and relationships, no 3D, no photorealism, no perspective tricks, no watermarks, no signatures, no borders, no extraneous decoration, aspect ratio close to 4:3.`;
+
+    let refined = `${data.prompt}. ${rails}`;
+    if (plan) {
+      const partsList = Array.isArray(plan.parts)
+        ? (plan.parts as Array<{ name?: string; label?: string; role?: string }>)
+            .map((p) => `- ${p.label ?? p.name ?? ""}${p.role ? ` (${p.role})` : ""}`)
+            .join("\n")
+        : "";
+      const paletteList = Array.isArray(plan.palette) ? (plan.palette as string[]).join("; ") : "";
+      const avoidList = Array.isArray(plan.avoid) ? (plan.avoid as string[]).join("; ") : "";
+      refined = `Educational 2D ${style} for a ${plan.gradeLevel ?? "middle/high school"} lesson.
+Subject: ${plan.subject ?? data.prompt}
+Learning goal: ${plan.learningGoal ?? ""}
+
+Required labeled parts (every one must appear, spelled exactly as written):
+${partsList}
+
+Layout: ${plan.layout ?? ""}
+Arrows / flow: ${plan.arrows ?? "none"}
+Color palette with meaning: ${paletteList}
+Style notes: ${plan.styleNotes ?? ""}
+Must avoid: ${avoidList}
+
+Rendering rules: ${rails}`;
+    }
+
+    // Step 3: RENDER with Nano Banana 2 (higher quality).
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -62,13 +108,8 @@ Return ONLY the final image prompt as plain text, no preamble, no quotes, no mar
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image-preview",
-        messages: [
-          {
-            role: "user",
-            content: refined,
-          },
-        ],
+        model: "google/gemini-3.1-flash-image",
+        messages: [{ role: "user", content: refined }],
         modalities: ["image", "text"],
       }),
     });
@@ -77,7 +118,23 @@ Return ONLY the final image prompt as plain text, no preamble, no quotes, no mar
       const text = await resp.text().catch(() => "");
       if (resp.status === 429) throw new Error("Rate limited. Please try again in a moment.");
       if (resp.status === 402) throw new Error("AI credits exhausted. Add credits in Settings.");
-      throw new Error(`AI error ${resp.status}: ${text.slice(0, 200)}`);
+      // Fallback to the older image model if the new one isn't available.
+      const fb = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image-preview",
+          messages: [{ role: "user", content: refined }],
+          modalities: ["image", "text"],
+        }),
+      });
+      if (!fb.ok) throw new Error(`AI error ${resp.status}: ${text.slice(0, 200)}`);
+      const fbj = (await fb.json()) as {
+        choices?: Array<{ message?: { images?: Array<{ image_url?: { url?: string } }> } }>;
+      };
+      const fbUrl = fbj?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      if (!fbUrl) throw new Error("No image returned from AI");
+      return { url: fbUrl, refinedPrompt: refined };
     }
 
     const json = (await resp.json()) as {
@@ -89,6 +146,7 @@ Return ONLY the final image prompt as plain text, no preamble, no quotes, no mar
     if (!url) throw new Error("No image returned from AI");
     return { url, refinedPrompt: refined };
   });
+
 
 const InteractiveSpec = z.object({
   kind: z.literal("bar-graph"),
