@@ -35,6 +35,14 @@ function hasAnswer(block: Block, value: unknown): boolean {
     case "short":
     case "open":
       return typeof value === "string" && value.trim().length > 0;
+    case "interactive": {
+      const spec = (block.data as Record<string, unknown>).spec as BarSpec | null;
+      if (!spec) return true;
+      const vals = (value as number[] | undefined) ?? [];
+      if (vals.length !== spec.categories.length) return false;
+      const tol = spec.tolerance ?? 0;
+      return spec.categories.every((c, i) => Math.abs((vals[i] ?? -Infinity) - c.target) <= tol);
+    }
     default:
       return true;
   }
