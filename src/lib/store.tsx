@@ -78,15 +78,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (hydrated) save(state);
   }, [state, hydrated]);
 
-  // Apply theme + accessibility classes
+  // Apply accessibility classes (theme is handled by ThemeProvider)
   useEffect(() => {
     if (!hydrated) return;
     const t = state.teacher;
-    const root = document.documentElement;
-    root.classList.toggle("dark", t?.theme === "dark");
     document.body.classList.toggle("dyslexia-font", !!t?.dyslexiaFont);
     document.body.classList.toggle("focus-mode", !!t?.focusMode);
   }, [state.teacher, hydrated]);
+
 
   const login = useCallback((email: string, _remember: boolean) => {
     setState((s) => ({
