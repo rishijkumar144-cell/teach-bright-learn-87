@@ -886,15 +886,26 @@ function Model2DBlockEditor({
   onChange: (patch: Record<string, unknown>) => void;
 }) {
   const [prompt, setPrompt] = useState((d.prompt as string) ?? "");
+  const [style, setStyle] = useState<"diagram" | "illustration" | "chart" | "infographic">(
+    (d.style as any) ?? "diagram",
+  );
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<"ai" | "upload">(d.url && !d.prompt ? "upload" : "ai");
+  const fileRef = useRef<HTMLInputElement>(null);
   const generate = useServerFn(generateDiagram);
 
   const run = async () => {
     if (!prompt.trim() || busy) return;
     setBusy(true);
     try {
-      const res = await generate({ data: { prompt: prompt.trim() } });
-      onChange({ url: res.url, prompt: prompt.trim(), caption: d.caption || prompt.trim() });
+      const res = await generate({ data: { prompt: prompt.trim(), style } });
+      onChange({
+        url: res.url,
+        prompt: prompt.trim(),
+        style,
+        refinedPrompt: res.refinedPrompt,
+        caption: d.caption || prompt.trim(),
+      });
       toast.success("2D diagram generated");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to generate");
@@ -903,35 +914,132 @@ function Model2DBlockEditor({
     }
   };
 
+  const onUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (PNG, JPG, SVG, WebP, GIF).");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Image is too large. Please pick a file under 4 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      onChange({ url: dataUrl, prompt: "", refinedPrompt: "", caption: d.caption || file.name });
+      toast.success("Image uploaded");
+    };
+    reader.onerror = () => toast.error("Could not read that file.");
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-4">
-      <div className="mb-2 flex items-center gap-2 text-sm font-medium">
-        <Sparkles className="h-4 w-4 text-primary" /> AI Diagram Chatbot
-      </div>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Describe the 2D diagram you want and AI will draw it. Students see the finished image.
-      </p>
-      <Textarea
-        rows={3}
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="e.g. A labeled diagram of a plant cell with nucleus, chloroplasts, and cell wall."
-      />
-      <div className="mt-2 flex items-center gap-2">
-        <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
-          {busy ? (
-            <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
-          ) : (
-            <><Sparkles className="h-4 w-4" /> {d.url ? "Regenerate" : "Generate"}</>
+      <div className="mb-3 flex items-center gap-1 rounded-lg bg-background p-1 text-sm">
+        <button
+          type="button"
+          onClick={() => setTab("ai")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition",
+            tab === "ai" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
           )}
-        </Button>
-        <Input
-          value={d.caption ?? ""}
-          onChange={(e) => onChange({ caption: e.target.value })}
-          placeholder="Caption (optional)"
-          className="flex-1"
-        />
+        >
+          <Sparkles className="h-3.5 w-3.5" /> AI diagram
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("upload")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition",
+            tab === "upload" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Upload className="h-3.5 w-3.5" /> Upload image
+        </button>
       </div>
+
+      {tab === "ai" ? (
+        <>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Describe the diagram; AI rewrites your prompt into a detailed brief, then draws it.
+          </p>
+          <Textarea
+            rows={3}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="e.g. A labeled diagram of a plant cell with nucleus, chloroplasts, and cell wall."
+          />
+          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {(["diagram", "illustration", "chart", "infographic"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setStyle(s)}
+                className={cn(
+                  "rounded-md border px-2 py-1.5 text-xs font-medium capitalize transition",
+                  style === s
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
+              {busy ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Generating…</>
+              ) : (
+                <><Sparkles className="h-4 w-4" /> {d.url ? "Regenerate" : "Generate"}</>
+              )}
+            </Button>
+            <Input
+              value={d.caption ?? ""}
+              onChange={(e) => onChange({ caption: e.target.value })}
+              placeholder="Caption (optional)"
+              className="flex-1"
+            />
+          </div>
+          {d.refinedPrompt && (
+            <details className="mt-2 text-xs text-muted-foreground">
+              <summary className="cursor-pointer">View AI's refined brief</summary>
+              <p className="mt-1 whitespace-pre-wrap rounded-md bg-background/60 p-2">
+                {d.refinedPrompt}
+              </p>
+            </details>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Upload your own diagram or image. PNG, JPG, SVG, WebP or GIF up to 4&nbsp;MB.
+          </p>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onUpload(f);
+              e.target.value = "";
+            }}
+          />
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+              <Upload className="h-4 w-4" /> {d.url ? "Replace image" : "Choose image"}
+            </Button>
+            <Input
+              value={d.caption ?? ""}
+              onChange={(e) => onChange({ caption: e.target.value })}
+              placeholder="Caption (optional)"
+              className="flex-1"
+            />
+          </div>
+        </>
+      )}
+
       {d.url && (
         <img
           src={d.url}
@@ -942,6 +1050,7 @@ function Model2DBlockEditor({
     </div>
   );
 }
+
 
 type BarSpec = {
   kind: "bar-graph";

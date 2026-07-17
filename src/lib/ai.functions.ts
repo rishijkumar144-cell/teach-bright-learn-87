@@ -5,12 +5,56 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const generateDiagram = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({ prompt: z.string().min(1).max(2000) }).parse(data),
+    z.object({
+      prompt: z.string().min(1).max(2000),
+      style: z.enum(["diagram", "illustration", "chart", "infographic"]).optional(),
+      previousUrl: z.string().optional(),
+    }).parse(data),
   )
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
 
+    // Step 1: use a strong chat model to rewrite the teacher's short prompt
+    // into a rich, education-focused image brief.
+    const briefResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: `You are an expert instructional illustrator. Rewrite the teacher's short request into a single detailed prompt for an image generator to produce a clean, educational 2D ${data.style ?? "diagram"}.
+
+Requirements the prompt MUST enforce:
+- Flat 2D vector-style illustration. No 3D, no photorealism, no perspective tricks.
+- Clean thin outlines, high-contrast colors from a small palette (2-5 colors).
+- Plain white or very light background.
+- All labels rendered as crisp, correctly spelled English text with clear leader lines from each label to its part.
+- Anatomically / scientifically / mathematically accurate. Include every part the teacher asked for and no extraneous elements.
+- Centered composition, generous margins, no watermarks, no signatures, no borders.
+- Aspect ratio ~4:3, suitable to display in a lesson at moderate size.
+
+Return ONLY the final image prompt as plain text, no preamble, no quotes, no markdown.`,
+          },
+          { role: "user", content: data.prompt },
+        ],
+      }),
+    });
+    let refined = data.prompt;
+    if (briefResp.ok) {
+      const bj = (await briefResp.json()) as {
+        choices?: Array<{ message?: { content?: string } }>;
+      };
+      const c = bj?.choices?.[0]?.message?.content?.trim();
+      if (c && c.length > 20) refined = c;
+    }
+
+    // Step 2: generate the image with the higher-quality Nano Banana 2 model.
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -22,7 +66,7 @@ export const generateDiagram = createServerFn({ method: "POST" })
         messages: [
           {
             role: "user",
-            content: `Create a clear educational 2D diagram or illustration for a lesson. Use clean lines, high contrast, clear labels, and a plain background. Prompt: ${data.prompt}`,
+            content: refined,
           },
         ],
         modalities: ["image", "text"],
@@ -43,7 +87,7 @@ export const generateDiagram = createServerFn({ method: "POST" })
     };
     const url = json?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     if (!url) throw new Error("No image returned from AI");
-    return { url };
+    return { url, refinedPrompt: refined };
   });
 
 const InteractiveSpec = z.object({
