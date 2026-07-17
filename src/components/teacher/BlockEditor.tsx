@@ -334,11 +334,9 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "paragraph":
       return (
         <BlockShell icon={def.icon} label={def.label}>
-          <Textarea
-            value={d.text ?? ""}
-            onChange={(e) => onChange({ text: e.target.value })}
-            placeholder="Write your paragraph…"
-            rows={3}
+          <ParagraphEditor
+            value={(d.text as string) ?? ""}
+            onChange={(text) => onChange({ text })}
           />
         </BlockShell>
       );
