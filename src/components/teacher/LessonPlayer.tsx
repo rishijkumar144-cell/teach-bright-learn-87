@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Box, Lightbulb, MessageCircleQuestion, BookmarkCheck, AlertCircle, ArrowRight, Lock, CheckCircle2 } from "lucide-react";
+import { Lightbulb, MessageCircleQuestion, BookmarkCheck, AlertCircle, ArrowRight, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Block, Lesson } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
@@ -9,10 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { MathPreview } from "./MathPreview";
 import { ParagraphWithMath } from "./BlockEditor";
-import type { BarSpec } from "./BlockEditor";
+import { StaticChart } from "./Charts";
+import { InteractiveRunner } from "./InteractiveRunner";
+import type { InteractiveSpec, StaticSpec } from "@/lib/charts";
+import { interactiveComplete } from "@/lib/charts";
 import { cn } from "@/lib/utils";
 
 const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
@@ -36,12 +38,9 @@ function hasAnswer(block: Block, value: unknown): boolean {
     case "open":
       return typeof value === "string" && value.trim().length > 0;
     case "interactive": {
-      const spec = (block.data as Record<string, unknown>).spec as BarSpec | null;
+      const spec = (block.data as Record<string, unknown>).spec as InteractiveSpec | null;
       if (!spec) return true;
-      const vals = (value as number[] | undefined) ?? [];
-      if (vals.length !== spec.categories.length) return false;
-      const tol = spec.tolerance ?? 0;
-      return spec.categories.every((c, i) => Math.abs((vals[i] ?? -Infinity) - c.target) <= tol);
+      return interactiveComplete(spec, value);
     }
     default:
       return true;
