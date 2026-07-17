@@ -189,13 +189,14 @@ Only "bar-graph" is supported. Make an adjustable bar graph where students drag 
         Authorization: `Bearer ${key}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3.1-pro-preview",
         messages: [
           { role: "system", content: system },
           { role: "user", content: data.prompt },
         ],
         response_format: { type: "json_object" },
       }),
+
     });
 
     if (!resp.ok) {
