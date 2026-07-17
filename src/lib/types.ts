@@ -8,6 +8,7 @@ export type BlockType =
   | "short"
   | "numeric"
   | "truefalse"
+  | "open"
   | "math"
   | "model3d"
   | "hint"
@@ -45,18 +46,23 @@ export interface Lesson {
 }
 
 export interface Teacher {
+  id: string;
   email: string;
   displayName: string;
   school: string;
-  theme: "light" | "dark";
-  notifications: boolean;
-  dyslexiaFont: boolean;
-  focusMode: boolean;
 }
 
-export interface StudentActivity {
+export interface Submission {
   id: string;
   lessonId: string;
+  lessonTitle?: string;
   studentName: string;
-  completedAt: number;
+  answers: Record<string, unknown>;
+  autoScore: number | null;
+  autoTotal: number | null;
+  manualScore: number | null;
+  manualTotal: number | null;
+  feedback: Record<string, { score?: number; comment?: string }>;
+  submittedAt: number;
+  gradedAt: number | null;
 }
