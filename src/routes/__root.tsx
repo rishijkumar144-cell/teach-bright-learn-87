@@ -12,7 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "../lib/store";
-import { ThemeProvider, ThemeToggle } from "@/components/ThemeToggle";
+import { AccessibilityProvider, AccessibilityToolbar } from "@/components/AccessibilityToolbar";
 
 import { Toaster } from "@/components/ui/sonner";
 
@@ -135,13 +135,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
+      <AccessibilityProvider>
         <StoreProvider>
-          <ThemeToggle />
+          <AccessibilityToolbar />
           <Outlet />
           <Toaster richColors position="top-right" />
         </StoreProvider>
-      </ThemeProvider>
+      </AccessibilityProvider>
     </QueryClientProvider>
   );
 }

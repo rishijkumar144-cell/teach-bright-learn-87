@@ -38,10 +38,11 @@ const DEFAULTS: A11yPrefs = {
 function apply(prefs: A11yPrefs) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
+  const body = document.body;
   root.classList.toggle("dark", prefs.theme === "dark");
-  root.classList.toggle("dyslexia-font", prefs.dyslexiaFont);
-  root.classList.toggle("focus-mode", prefs.focusMode);
-  root.classList.toggle("high-contrast", prefs.highContrast);
+  body?.classList.toggle("dyslexia-font", prefs.dyslexiaFont);
+  body?.classList.toggle("focus-mode", prefs.focusMode);
+  body?.classList.toggle("high-contrast", prefs.highContrast);
   root.style.setProperty("--reader-scale", `${prefs.textScale / 100}`);
   root.style.setProperty("--reader-line", `${prefs.lineSpacing}`);
 }
