@@ -588,11 +588,21 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
             placeholder="Prompt for the student to write a long-form answer…"
             rows={2}
           />
+          <div className="mt-3">
+            <Label className="text-xs">Sample solution (shown after they submit)</Label>
+            <Textarea
+              rows={3}
+              value={(d.explanation as string) ?? ""}
+              onChange={(e) => onChange({ explanation: e.target.value })}
+              placeholder="A model answer or key points the student can compare to…"
+            />
+          </div>
           <div className="mt-3 flex items-center justify-between rounded-xl border border-border/70 bg-accent/30 p-3">
             <div>
               <div className="text-sm font-medium">Required</div>
               <p className="text-xs text-muted-foreground">
-                Student must write something before submitting. You will grade it manually.
+                Student must write and submit an answer before they can move on. You will grade
+                it manually.
               </p>
             </div>
             <Switch
