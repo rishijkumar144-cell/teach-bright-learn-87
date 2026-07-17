@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Box, Lightbulb, MessageCircleQuestion, BookmarkCheck, AlertCircle, ArrowRight, Lock, CheckCircle2 } from "lucide-react";
+import { Lightbulb, MessageCircleQuestion, BookmarkCheck, AlertCircle, ArrowRight, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Block, Lesson } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
@@ -9,10 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
 import { MathPreview } from "./MathPreview";
 import { ParagraphWithMath } from "./BlockEditor";
-import type { BarSpec } from "./BlockEditor";
+import { StaticChart } from "./Charts";
+import { InteractiveRunner } from "./InteractiveRunner";
+import type { InteractiveSpec, StaticSpec } from "@/lib/charts";
+import { interactiveComplete } from "@/lib/charts";
 import { cn } from "@/lib/utils";
 
 const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
@@ -36,12 +38,9 @@ function hasAnswer(block: Block, value: unknown): boolean {
     case "open":
       return typeof value === "string" && value.trim().length > 0;
     case "interactive": {
-      const spec = (block.data as Record<string, unknown>).spec as BarSpec | null;
+      const spec = (block.data as Record<string, unknown>).spec as InteractiveSpec | null;
       if (!spec) return true;
-      const vals = (value as number[] | undefined) ?? [];
-      if (vals.length !== spec.categories.length) return false;
-      const tol = spec.tolerance ?? 0;
-      return spec.categories.every((c, i) => Math.abs((vals[i] ?? -Infinity) - c.target) <= tol);
+      return interactiveComplete(spec, value);
     }
     default:
       return true;
@@ -581,21 +580,26 @@ function BlockRender({
           />
         </QuestionCard>
       );
-    case "model2d":
-      return d.url ? (
-        <figure className="overflow-hidden rounded-2xl border border-border">
-          <img src={d.url} alt={d.caption || ""} className="w-full bg-background object-contain" />
+    case "model2d": {
+      const spec = (d.spec as StaticSpec | undefined) ?? null;
+      if (!spec) {
+        return (
+          <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            Diagram not configured.
+          </div>
+        );
+      }
+      return (
+        <div className="space-y-2">
+          <StaticChart spec={spec} />
           {d.caption && (
-            <figcaption className="p-3 text-sm text-muted-foreground">{d.caption}</figcaption>
+            <p className="text-sm text-muted-foreground">{d.caption as string}</p>
           )}
-        </figure>
-      ) : (
-        <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          AI diagram not generated yet.
         </div>
       );
+    }
     case "interactive": {
-      const spec = d.spec as BarSpec | null;
+      const spec = (d.spec as InteractiveSpec | undefined) ?? null;
       if (!spec) {
         return (
           <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
@@ -603,98 +607,15 @@ function BlockRender({
           </div>
         );
       }
-      const vals: number[] = Array.isArray(value)
-        ? (value as number[])
-        : new Array(spec.categories.length).fill(0);
-      const tol = spec.tolerance ?? 0;
-      const allMatched = spec.categories.every(
-        (c, i) => Math.abs((vals[i] ?? -Infinity) - c.target) <= tol,
-      );
       return (
-        <div
-          className={cn(
-            "rounded-2xl border bg-card p-5 shadow-soft transition",
-            isMissing ? "border-destructive ring-2 ring-destructive/30" : "border-border",
-          )}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Box className="h-4 w-4 text-primary" /> {spec.title}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{spec.instructions}</p>
-            </div>
-            {submitted && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
-                <CheckCircle2 className="h-3 w-3" /> Submitted
-              </span>
-            )}
-          </div>
-          <div className="mt-4 flex h-56 items-end gap-3">
-            {spec.categories.map((c, i) => {
-              const v = vals[i] ?? 0;
-              const heightPct = Math.min(100, (v / Math.max(spec.max, 1)) * 100);
-              const matched = Math.abs(v - c.target) <= tol;
-              return (
-                <div key={i} className="flex flex-1 flex-col items-center justify-end gap-2">
-                  <div className="text-xs font-medium">
-                    {v}
-                    {spec.unit ?? ""}
-                  </div>
-                  <div className="relative h-40 w-full rounded-md bg-accent">
-                    <div
-                      className={cn(
-                        "absolute inset-x-0 bottom-0 rounded-md transition-all",
-                        submitted
-                          ? matched
-                            ? "bg-emerald-500"
-                            : "bg-destructive"
-                          : matched
-                            ? "bg-emerald-500/70"
-                            : "bg-primary/70",
-                      )}
-                      style={{ height: `${heightPct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 flex gap-3">
-            {spec.categories.map((c, i) => (
-              <div key={i} className="flex flex-1 flex-col items-center gap-1">
-                <Slider
-                  value={[vals[i] ?? 0]}
-                  min={0}
-                  max={spec.max}
-                  step={Math.max(1, Math.round(spec.max / 100))}
-                  disabled={submitted}
-                  onValueChange={(nv) => {
-                    const next = [...vals];
-                    next[i] = nv[0] ?? 0;
-                    onChange(next);
-                  }}
-                />
-                <div className="truncate text-[11px] text-center">{c.label}</div>
-              </div>
-            ))}
-          </div>
-          {!submitted && (
-            <div className="mt-4 flex items-center justify-between gap-3">
-              <p className="text-xs text-muted-foreground">
-                Match every bar to its correct value{tol > 0 ? ` (±${tol}${spec.unit ?? ""})` : ""} to submit.
-              </p>
-              <Button size="sm" onClick={onSubmit} disabled={!allMatched}>
-                Submit
-              </Button>
-            </div>
-          )}
-          {submitted && (
-            <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
-              Great — all bars match the target values.
-            </div>
-          )}
-        </div>
+        <InteractiveRunner
+          spec={spec}
+          value={value}
+          onChange={onChange}
+          onSubmit={onSubmit}
+          submitted={submitted}
+          isMissing={isMissing}
+        />
       );
     }
   }
