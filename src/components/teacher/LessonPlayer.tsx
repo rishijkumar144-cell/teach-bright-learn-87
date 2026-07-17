@@ -1,6 +1,6 @@
 import { type ReactNode, useMemo, useState } from "react";
 import { motion } from "motion/react";
-import { Box, Lightbulb, MessageCircleQuestion, BookmarkCheck, AlertCircle, ArrowRight, Lock } from "lucide-react";
+import { Box, Lightbulb, MessageCircleQuestion, BookmarkCheck, AlertCircle, ArrowRight, Lock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import type { Block, Lesson } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
@@ -9,12 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { MathPreview } from "./MathPreview";
 import { ParagraphWithMath } from "./BlockEditor";
+import type { BarSpec } from "./BlockEditor";
 import { cn } from "@/lib/utils";
 
-const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open"]);
-const SUBMITTABLE_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open"]);
+const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
+const SUBMITTABLE_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
 
 export interface LessonAttemptResult {
   studentName: string;
