@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Type,
@@ -10,7 +10,6 @@ import {
   TextCursorInput,
   Hash,
   ToggleLeft,
-  Calculator,
   Box,
   Lightbulb,
   Minus,
@@ -26,7 +25,13 @@ import {
   Copy,
   Info,
   Upload,
+  Sigma,
+  Sparkles,
+  SplitSquareVertical,
+  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -43,6 +48,7 @@ import { newBlockId } from "@/lib/store";
 import type { Block, BlockType } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MathPreview } from "./MathPreview";
+import { generateDiagram } from "@/lib/ai.functions";
 
 interface BlockDef {
   type: BlockType;
