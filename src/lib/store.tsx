@@ -164,7 +164,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const dbPatch: Record<string, unknown> = {};
       if (patch.displayName !== undefined) dbPatch.display_name = patch.displayName;
       if (patch.school !== undefined) dbPatch.school = patch.school;
-      const { error } = await supabase.from("profiles").update(dbPatch).eq("id", teacher.id);
+      const { error } = await supabase.from("profiles").update(dbPatch as never).eq("id", teacher.id);
       if (error) {
         toast.error(error.message);
         return;
@@ -191,8 +191,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         owner_id: teacher.id,
         slug,
         title: "Untitled Lesson",
-        blocks: initialBlocks,
-      })
+        blocks: initialBlocks as unknown as never,
+      } as never)
       .select("*")
       .single();
     if (error || !data) {
@@ -210,7 +210,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setLessons((prev) =>
       prev.map((l) => (l.id === id ? { ...l, ...patch, updatedAt: Date.now() } : l)),
     );
-    const { error } = await supabase.from("lessons").update(dbPatch).eq("id", id);
+    const { error } = await supabase.from("lessons").update(dbPatch as never).eq("id", id);
     if (error) toast.error(error.message);
   }, []);
 
@@ -225,7 +225,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("lessons")
-        .update({ status: "published", published_at: now })
+        .update({ status: "published", published_at: now } as never)
         .eq("id", id)
         .select("*")
         .single();
@@ -242,13 +242,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const unpublishLesson = useCallback(async (id: string) => {
     setLessons((prev) => prev.map((l) => (l.id === id ? { ...l, status: "draft" } : l)));
-    const { error } = await supabase.from("lessons").update({ status: "draft" }).eq("id", id);
+    const { error } = await supabase.from("lessons").update({ status: "draft" } as never).eq("id", id);
     if (error) toast.error(error.message);
   }, []);
 
   const archiveLesson = useCallback(async (id: string) => {
     setLessons((prev) => prev.map((l) => (l.id === id ? { ...l, status: "archived" } : l)));
-    const { error } = await supabase.from("lessons").update({ status: "archived" }).eq("id", id);
+    const { error } = await supabase.from("lessons").update({ status: "archived" } as never).eq("id", id);
     if (error) toast.error(error.message);
   }, []);
 
@@ -272,7 +272,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (patch.feedback !== undefined) dbPatch.feedback = patch.feedback;
       const { data, error } = await supabase
         .from("submissions")
-        .update(dbPatch)
+        .update(dbPatch as never)
         .eq("id", id)
         .select("*")
         .single();
