@@ -632,49 +632,16 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
           <QuestionExtras d={d} onChange={onChange} />
         </BlockShell>
       );
-    case "model3d":
+    case "model2d":
       return (
         <BlockShell icon={def.icon} label={def.label}>
-          <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-5">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label className="text-xs">Model title</Label>
-                <Input
-                  value={d.name ?? ""}
-                  onChange={(e) => onChange({ name: e.target.value })}
-                  placeholder="e.g. Unit Cube"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Description</Label>
-                <Input
-                  value={d.description ?? ""}
-                  onChange={(e) => onChange({ description: e.target.value })}
-                  placeholder="Short description shown to students"
-                />
-              </div>
-            </div>
-            <div className="mt-4 grid place-items-center rounded-xl bg-gradient-to-br from-primary/10 to-accent p-10 text-center">
-              <Box className="h-10 w-10 text-primary" />
-              <div className="mt-2 text-sm font-medium">3D Preview area</div>
-              <Button size="sm" variant="outline" disabled className="mt-3">
-                <Upload className="h-4 w-4" /> Upload model (coming soon)
-              </Button>
-            </div>
-            <div className="mt-3">
-              <Label className="text-xs">Teacher notes</Label>
-              <Textarea
-                rows={3}
-                value={d.notes ?? ""}
-                onChange={(e) => onChange({ notes: e.target.value })}
-                placeholder="Guidance for students exploring this model…"
-              />
-            </div>
-            <div className="mt-3 flex items-start gap-2 rounded-lg bg-background/60 p-3 text-xs text-muted-foreground">
-              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              This will support interactive Three.js models in the future.
-            </div>
-          </div>
+          <Model2DBlockEditor d={d} onChange={onChange} />
+        </BlockShell>
+      );
+    case "interactive":
+      return (
+        <BlockShell icon={def.icon} label={def.label}>
+          <InteractiveBlockEditor d={d} onChange={onChange} />
         </BlockShell>
       );
   }
