@@ -581,15 +581,122 @@ function BlockRender({
           />
         </QuestionCard>
       );
-    case "model3d":
-      return (
-        <div className="rounded-2xl border border-dashed border-primary/40 bg-primary/5 p-6">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Box className="h-4 w-4 text-primary" /> {d.name || "Interactive 3D Model"}
-          </div>
-          {d.description && <p className="mt-1 text-sm text-muted-foreground">{d.description}</p>}
+    case "model2d":
+      return d.url ? (
+        <figure className="overflow-hidden rounded-2xl border border-border">
+          <img src={d.url} alt={d.caption || ""} className="w-full bg-background object-contain" />
+          {d.caption && (
+            <figcaption className="p-3 text-sm text-muted-foreground">{d.caption}</figcaption>
+          )}
+        </figure>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+          AI diagram not generated yet.
         </div>
       );
+    case "interactive": {
+      const spec = d.spec as BarSpec | null;
+      if (!spec) {
+        return (
+          <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+            Interactive diagram not configured.
+          </div>
+        );
+      }
+      const vals: number[] = Array.isArray(value)
+        ? (value as number[])
+        : new Array(spec.categories.length).fill(0);
+      const tol = spec.tolerance ?? 0;
+      const allMatched = spec.categories.every(
+        (c, i) => Math.abs((vals[i] ?? -Infinity) - c.target) <= tol,
+      );
+      return (
+        <div
+          className={cn(
+            "rounded-2xl border bg-card p-5 shadow-soft transition",
+            isMissing ? "border-destructive ring-2 ring-destructive/30" : "border-border",
+          )}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Box className="h-4 w-4 text-primary" /> {spec.title}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">{spec.instructions}</p>
+            </div>
+            {submitted && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
+                <CheckCircle2 className="h-3 w-3" /> Submitted
+              </span>
+            )}
+          </div>
+          <div className="mt-4 flex h-56 items-end gap-3">
+            {spec.categories.map((c, i) => {
+              const v = vals[i] ?? 0;
+              const heightPct = Math.min(100, (v / Math.max(spec.max, 1)) * 100);
+              const matched = Math.abs(v - c.target) <= tol;
+              return (
+                <div key={i} className="flex flex-1 flex-col items-center justify-end gap-2">
+                  <div className="text-xs font-medium">
+                    {v}
+                    {spec.unit ?? ""}
+                  </div>
+                  <div className="relative h-40 w-full rounded-md bg-accent">
+                    <div
+                      className={cn(
+                        "absolute inset-x-0 bottom-0 rounded-md transition-all",
+                        submitted
+                          ? matched
+                            ? "bg-emerald-500"
+                            : "bg-destructive"
+                          : matched
+                            ? "bg-emerald-500/70"
+                            : "bg-primary/70",
+                      )}
+                      style={{ height: `${heightPct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex gap-3">
+            {spec.categories.map((c, i) => (
+              <div key={i} className="flex flex-1 flex-col items-center gap-1">
+                <Slider
+                  value={[vals[i] ?? 0]}
+                  min={0}
+                  max={spec.max}
+                  step={Math.max(1, Math.round(spec.max / 100))}
+                  disabled={submitted}
+                  onValueChange={(nv) => {
+                    const next = [...vals];
+                    next[i] = nv[0] ?? 0;
+                    onChange(next);
+                  }}
+                />
+                <div className="truncate text-[11px] text-center">{c.label}</div>
+              </div>
+            ))}
+          </div>
+          {!submitted && (
+            <div className="mt-4 flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Match every bar to its correct value{tol > 0 ? ` (±${tol}${spec.unit ?? ""})` : ""} to submit.
+              </p>
+              <Button size="sm" onClick={onSubmit} disabled={!allMatched}>
+                Submit
+              </Button>
+            </div>
+          )}
+          {submitted && (
+            <div className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-3 text-sm text-emerald-700 dark:text-emerald-400">
+              Great — all bars match the target values.
+            </div>
+          )}
+        </div>
+      );
+    }
   }
 }
 
