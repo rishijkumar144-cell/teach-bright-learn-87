@@ -367,6 +367,11 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
         </BlockShell>
       );
     case "image":
+      return (
+        <BlockShell icon={def.icon} label={def.label}>
+          <ImageBlockEditor d={d} onChange={onChange} />
+        </BlockShell>
+      );
     case "video":
       return (
         <BlockShell icon={def.icon} label={def.label}>
@@ -374,39 +379,47 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
             <Input
               value={d.url ?? ""}
               onChange={(e) => onChange({ url: e.target.value })}
-              placeholder={block.type === "image" ? "https://…/image.jpg" : "https://…/video.mp4 or YouTube URL"}
+              placeholder="https://…/video.mp4 or YouTube URL"
             />
             <Input
               value={d.caption ?? ""}
               onChange={(e) => onChange({ caption: e.target.value })}
               placeholder="Optional caption"
             />
-            {d.url && block.type === "image" && (
-              <img
-                src={d.url}
-                alt={d.caption || ""}
-                className="mt-2 max-h-60 rounded-xl border border-border object-cover"
+          </div>
+        </BlockShell>
+      );
+    case "split":
+      return (
+        <BlockShell icon={def.icon} label={def.label}>
+          <div className="rounded-xl border border-dashed border-primary/40 bg-primary/5 p-3">
+            <div className="text-sm font-medium">Page break</div>
+            <p className="text-xs text-muted-foreground">
+              Everything after this block starts a new page. Students must complete this page
+              before they can move on.
+            </p>
+            <div className="mt-2">
+              <Label className="text-xs">Next-page button label</Label>
+              <Input
+                value={(d.label as string) ?? ""}
+                onChange={(e) => onChange({ label: e.target.value })}
+                placeholder="Continue"
               />
-            )}
+            </div>
           </div>
         </BlockShell>
       );
     case "math":
       return (
         <BlockShell icon={def.icon} label={def.label}>
-          <Input
-            value={d.equation ?? ""}
-            onChange={(e) => onChange({ equation: e.target.value })}
-            placeholder="e.g. a^2 + b^2 = c^2"
-            className="font-mono"
-          />
-          <div className="mt-2 min-h-[64px] rounded-xl bg-accent/60 p-4 text-center">
+          <div className="rounded-xl border border-dashed border-border bg-accent/30 p-3 text-xs text-muted-foreground">
+            The standalone Math block is deprecated. Use a Paragraph block and click the{" "}
+            <Sigma className="inline h-3 w-3" /> button to insert inline equations with{" "}
+            <code className="font-mono">$…$</code>.
+          </div>
+          <div className="mt-2 min-h-[48px] rounded-xl bg-accent/60 p-3 text-center">
             <MathPreview equation={d.equation ?? ""} />
           </div>
-          <p className="mt-1.5 text-xs text-muted-foreground">
-            Live LaTeX preview · e.g. <code className="font-mono">\frac{'{a}{b}'}</code>,{" "}
-            <code className="font-mono">\sqrt{'{x}'}</code>
-          </p>
         </BlockShell>
       );
     case "mcq":
