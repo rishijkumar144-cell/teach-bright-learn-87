@@ -41,13 +41,12 @@ export function TeacherLayout({
   children: ReactNode;
   showCreate?: boolean;
 }) {
-  const { teacher, hydrated, logout, createLesson } = useStore();
+  const { teacher, authReady, logout, createLesson } = useStore();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (hydrated && !teacher) {
-    // Redirect handled via effect for auth pages; keep simple client-side.
+  if (authReady && !teacher) {
     if (typeof window !== "undefined") window.location.href = "/login";
     return null;
   }
@@ -59,9 +58,9 @@ export function TeacherLayout({
     .slice(0, 2)
     .toUpperCase();
 
-  const onCreate = () => {
-    const l = createLesson();
-    navigate({ to: "/lessons/$id", params: { id: l.id } });
+  const onCreate = async () => {
+    const l = await createLesson();
+    if (l) navigate({ to: "/lessons/$id", params: { id: l.id } });
   };
 
   return (

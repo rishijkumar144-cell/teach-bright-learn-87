@@ -44,9 +44,9 @@ function LessonsList() {
     .filter((l) => (tab === "all" ? true : l.status === tab))
     .filter((l) => l.title.toLowerCase().includes(q.toLowerCase()));
 
-  const onCreate = () => {
-    const l = createLesson();
-    navigate({ to: "/lessons/$id", params: { id: l.id } });
+  const onCreate = async () => {
+    const l = await createLesson();
+    if (l) navigate({ to: "/lessons/$id", params: { id: l.id } });
   };
 
   return (
