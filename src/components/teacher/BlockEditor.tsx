@@ -738,3 +738,174 @@ export function makeBlock(type: BlockType): Block {
   const def = BLOCK_DEFS.find((d) => d.type === type)!;
   return { id: newBlockId(), type, data: def.init() };
 }
+
+function ParagraphEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (text: string) => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const insertEquation = () => {
+    const ta = ref.current;
+    const snippet = "$a^2 + b^2 = c^2$";
+    if (!ta) {
+      onChange((value ?? "") + " " + snippet);
+      return;
+    }
+    const start = ta.selectionStart ?? value.length;
+    const end = ta.selectionEnd ?? value.length;
+    const next = value.slice(0, start) + snippet + value.slice(end);
+    onChange(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + 1;
+      ta.setSelectionRange(pos, pos + snippet.length - 2);
+    });
+  };
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={insertEquation}
+          className="h-8"
+        >
+          <Sigma className="h-3.5 w-3.5" /> Insert equation
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          Wrap LaTeX in <code className="font-mono">$…$</code> for inline math.
+        </span>
+      </div>
+      <Textarea
+        ref={ref}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Write your paragraph… use $x^2$ for inline equations."
+        rows={4}
+      />
+      {value.includes("$") && (
+        <div className="mt-2 rounded-xl border border-border bg-accent/30 p-3 text-sm">
+          <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Preview
+          </div>
+          <ParagraphWithMath text={value} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function ParagraphWithMath({ text }: { text: string }) {
+  const parts = (text ?? "").split(/(\$[^$\n]+\$)/g);
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (p.length >= 2 && p.startsWith("$") && p.endsWith("$")) {
+          return (
+            <MathPreview
+              key={i}
+              equation={p.slice(1, -1)}
+              displayMode={false}
+              className="mx-0.5"
+            />
+          );
+        }
+        return <span key={i}>{p}</span>;
+      })}
+    </>
+  );
+}
+
+function ImageBlockEditor({
+  d,
+  onChange,
+}: {
+  d: Record<string, any>;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  const [prompt, setPrompt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const generate = useServerFn(generateDiagram);
+
+  const run = async () => {
+    if (!prompt.trim() || busy) return;
+    setBusy(true);
+    try {
+      const res = await generate({ data: { prompt: prompt.trim() } });
+      onChange({ url: res.url, caption: d.caption || prompt.trim() });
+      toast.success("Diagram generated");
+      setAiOpen(false);
+      setPrompt("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to generate image");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Input
+        value={d.url ?? ""}
+        onChange={(e) => onChange({ url: e.target.value })}
+        placeholder="https://…/image.jpg — or generate one with AI below"
+      />
+      <Input
+        value={d.caption ?? ""}
+        onChange={(e) => onChange({ caption: e.target.value })}
+        placeholder="Optional caption"
+      />
+      <div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setAiOpen((v) => !v)}
+        >
+          <Sparkles className="h-4 w-4" /> Generate diagram with AI
+        </Button>
+      </div>
+      {aiOpen && (
+        <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+          <Label className="text-xs">Describe the diagram you want</Label>
+          <Textarea
+            rows={2}
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            placeholder="e.g. A labeled diagram of the water cycle with arrows for evaporation, condensation, and precipitation."
+          />
+          <div className="mt-2 flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setAiOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={run} disabled={busy || !prompt.trim()}>
+              {busy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Generating…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" /> Generate
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+      {d.url && (
+        <img
+          src={d.url}
+          alt={d.caption || ""}
+          className="mt-2 max-h-60 rounded-xl border border-border object-cover"
+        />
+      )}
+    </div>
+  );
+}
