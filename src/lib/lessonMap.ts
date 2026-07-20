@@ -72,6 +72,7 @@ export function lessonToUpdate(l: Partial<Lesson>): Record<string, unknown> {
   if (l.blocks !== undefined) out.blocks = l.blocks;
   if (l.status !== undefined) out.status = l.status;
   if (l.requireStudentName !== undefined) out.require_student_name = l.requireStudentName;
+  if (l.oneResponsePerEmail !== undefined) out.one_response_per_email = l.oneResponsePerEmail;
   if (l.publishedAt !== undefined) {
     out.published_at = l.publishedAt ? new Date(l.publishedAt).toISOString() : null;
   }
