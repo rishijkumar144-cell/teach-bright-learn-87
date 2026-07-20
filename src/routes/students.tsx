@@ -426,6 +426,27 @@ function SubmissionDetail({
                     {renderAnswer(b)}
                   </div>
 
+                  {(() => {
+                    const sol = renderSolution(b);
+                    const explanation = typeof d.explanation === "string" ? d.explanation.trim() : "";
+                    if (!sol && !explanation) return null;
+                    return (
+                      <>
+                        <div className="mt-3 text-xs uppercase tracking-wide text-[oklch(0.45_0.15_160)] dark:text-[oklch(0.8_0.15_160)]">
+                          Correct answer
+                        </div>
+                        <div className="mt-1 space-y-2 rounded-lg border border-[oklch(0.7_0.15_160)/30%] bg-[oklch(0.7_0.15_160)/8%] p-3 text-sm">
+                          {sol && <div className="font-medium">{sol}</div>}
+                          {explanation && (
+                            <div className="whitespace-pre-wrap text-muted-foreground">
+                              {explanation}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+
                   <div
                     className={`mt-3 grid gap-3 sm:grid-cols-[160px_1fr] ${
                       excused ? "opacity-50" : ""
