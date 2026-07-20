@@ -389,6 +389,12 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "paragraph":
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          <div className="mb-2 flex justify-end">
+            <AiGenerateButton
+              kind="paragraph"
+              onGenerated={(r) => onChange({ text: String(r.text ?? "") })}
+            />
+          </div>
           <ParagraphEditor
             value={(d.text as string) ?? ""}
             onChange={(text) => onChange({ text })}
