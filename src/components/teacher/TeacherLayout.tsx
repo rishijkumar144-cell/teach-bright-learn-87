@@ -65,7 +65,7 @@ export function TeacherLayout({
 
   return (
     <div className="min-h-dvh bg-background">
-      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md focus-dim">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
           <Link to="/dashboard" className="flex items-center gap-2">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-soft">
@@ -186,7 +186,7 @@ export function TeacherLayout({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onCreate}
-          className="focus-dim fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-4 text-sm font-semibold text-primary-foreground shadow-lift sm:hidden"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-4 text-sm font-semibold text-primary-foreground shadow-lift sm:hidden"
           aria-label="Create new lesson"
         >
           <Plus className="h-5 w-5" />

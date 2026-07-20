@@ -149,7 +149,7 @@ function LessonEditor() {
 
       <div className="grid gap-6 lg:grid-cols-[280px_1fr]">
         {/* Palette */}
-        <aside className="lg:sticky lg:top-24 lg:h-fit focus-hide">
+        <aside className="lg:sticky lg:top-24 lg:h-fit">
           <div className="card-soft p-4">
             <div className="mb-3 text-sm font-semibold">Blocks</div>
             <BlockPalette onAdd={addBlock} />

@@ -5,7 +5,6 @@ import {
   Moon,
   Sun,
   Type,
-  Focus,
   ALargeSmall,
   Baseline,
   RotateCcw,
@@ -20,7 +19,6 @@ const KEY = "mathly.a11y.v1";
 interface A11yPrefs {
   theme: "light" | "dark";
   dyslexiaFont: boolean;
-  focusMode: boolean;
   textScale: number; // 90 - 150
   lineSpacing: number; // 1.4 - 2.2
   highContrast: boolean;
@@ -29,7 +27,6 @@ interface A11yPrefs {
 const DEFAULTS: A11yPrefs = {
   theme: "light",
   dyslexiaFont: false,
-  focusMode: false,
   textScale: 100,
   lineSpacing: 1.6,
   highContrast: false,
@@ -41,7 +38,7 @@ function apply(prefs: A11yPrefs) {
   const body = document.body;
   root.classList.toggle("dark", prefs.theme === "dark");
   body?.classList.toggle("dyslexia-font", prefs.dyslexiaFont);
-  body?.classList.toggle("focus-mode", prefs.focusMode);
+  body?.classList.remove("focus-mode");
   body?.classList.toggle("high-contrast", prefs.highContrast);
   root.style.setProperty("--reader-scale", `${prefs.textScale / 100}`);
   root.style.setProperty("--reader-line", `${prefs.lineSpacing}`);
@@ -166,16 +163,6 @@ export function AccessibilityToolbar() {
                 <Switch
                   checked={prefs.dyslexiaFont}
                   onCheckedChange={(v) => patch({ dyslexiaFont: v })}
-                />
-              </Row>
-              <Row
-                icon={Focus}
-                label="Focus mode"
-                description="Dims decorations and one-thing-at-a-time layout."
-              >
-                <Switch
-                  checked={prefs.focusMode}
-                  onCheckedChange={(v) => patch({ focusMode: v })}
                 />
               </Row>
               <Row
