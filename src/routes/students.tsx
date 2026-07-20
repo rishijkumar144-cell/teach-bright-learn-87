@@ -325,12 +325,23 @@ function SubmissionDetail({
               const fb = feedback[b.id] ?? {};
               return (
                 <li key={b.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="text-sm font-medium">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Question
+                  </div>
+                  <div className="mt-1 whitespace-pre-wrap text-base font-medium leading-relaxed">
                     {(d.question ?? d.text ?? "Open response") as string}
                   </div>
-                  <div className="mt-2 whitespace-pre-wrap rounded-lg bg-accent/40 p-3 text-sm">
+                  {typeof d.description === "string" && d.description.trim() ? (
+                    <div className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                      {d.description as string}
+                    </div>
+                  ) : null}
+                  <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">
+                    Student answer
+                  </div>
+                  <div className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-3 text-sm">
                     {typeof val === "string" && val.trim() ? val : (
-                      <span className="italic text-muted-foreground">No answer</span>
+                      <span className="italic text-muted-foreground">No answer (skipped)</span>
                     )}
                   </div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-[120px_1fr]">
