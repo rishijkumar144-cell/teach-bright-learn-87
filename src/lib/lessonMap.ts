@@ -14,6 +14,7 @@ interface LessonRow {
   blocks: unknown;
   status: string;
   require_student_name: boolean;
+  one_response_per_email?: boolean;
   visits: number;
   created_at: string;
   updated_at: string;
