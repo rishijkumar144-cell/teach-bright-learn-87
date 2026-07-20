@@ -105,7 +105,7 @@ export function AccessibilityToolbar() {
   const patch = (p: Partial<A11yPrefs>) => setPrefs((cur) => ({ ...cur, ...p }));
 
   return (
-    <div className="fixed right-4 top-4 z-50 flex items-center gap-2 focus-hide-lite">
+    <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
       <Button
         variant="outline"
         size="icon"
