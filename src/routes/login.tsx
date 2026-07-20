@@ -128,12 +128,18 @@ function LoginPage() {
             <span className="text-lg font-bold">Mathly</span>
           </div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {mode === "signin" ? "Sign in to your portal" : "Create your teacher account"}
+            {mode === "signin"
+              ? "Sign in to your portal"
+              : mode === "signup"
+                ? "Create your teacher account"
+                : "Reset your password"}
           </h2>
           <p className="mt-2 text-muted-foreground">
             {mode === "signin"
               ? "Continue building lessons your students will love."
-              : "Set up your workspace in seconds."}
+              : mode === "signup"
+                ? "Set up your workspace in seconds."
+                : "Enter your email and we'll send you a link to reset your password."}
           </p>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-5">
@@ -167,37 +173,67 @@ function LoginPage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  className="h-12 pl-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                />
+            {mode !== "forgot" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  {mode === "signin" && (
+                    <button
+                      type="button"
+                      onClick={() => setMode("forgot")}
+                      className="text-xs font-semibold text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="h-12 pl-10"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <Button type="submit" size="lg" className="h-12 w-full text-base" disabled={loading}>
-              {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+              {loading
+                ? "Please wait…"
+                : mode === "signin"
+                  ? "Sign in"
+                  : mode === "signup"
+                    ? "Create account"
+                    : "Send reset link"}
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
-              {mode === "signin" ? "New to Mathly? " : "Already have an account? "}
+            {mode === "forgot" ? (
               <button
                 type="button"
-                onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-                className="font-semibold text-primary hover:underline"
+                onClick={() => setMode("signin")}
+                className="mx-auto flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
               >
-                {mode === "signin" ? "Create account" : "Sign in"}
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
               </button>
-            </p>
+            ) : (
+              <p className="text-center text-sm text-muted-foreground">
+                {mode === "signin" ? "New to Mathly? " : "Already have an account? "}
+                <button
+                  type="button"
+                  onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  {mode === "signin" ? "Create account" : "Sign in"}
+                </button>
+              </p>
+            )}
           </form>
+
         </motion.div>
       </div>
     </div>
