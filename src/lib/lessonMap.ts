@@ -51,6 +51,7 @@ export function rowToLesson(row: LessonRow): Lesson {
     blocks: Array.isArray(row.blocks) ? (row.blocks as Block[]) : [],
     status: (row.status as LessonStatus) || "draft",
     requireStudentName: row.require_student_name,
+    oneResponsePerEmail: !!row.one_response_per_email,
     visits: row.visits,
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
