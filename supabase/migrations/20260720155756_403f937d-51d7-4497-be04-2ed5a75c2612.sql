@@ -1,0 +1,1 @@
+ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS solution_timing text NOT NULL DEFAULT 'immediate';
