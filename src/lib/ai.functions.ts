@@ -483,7 +483,7 @@ export const studyChat = createServerFn({ method: "POST" })
 
 const GameQuestionsInput = z.object({
   topic: z.string().min(1).max(200),
-  count: z.number().min(3).max(30).default(25),
+  count: z.number().min(5).max(75).default(25),
 });
 
 
