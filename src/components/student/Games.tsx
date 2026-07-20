@@ -34,7 +34,7 @@ export function GamesHub({ seedQuestions }: GamePickerProps) {
     }
     setLoading(true);
     try {
-      const res = await generateGameQuestions({ data: { topic: topic.trim(), count: 10 } });
+      const res = await generateGameQuestions({ data: { topic: topic.trim(), count: 25 } });
       if (!res.questions.length) throw new Error("No questions generated");
       setQuestions(res.questions);
       toast.success(`Loaded ${res.questions.length} questions on "${topic}"`);
