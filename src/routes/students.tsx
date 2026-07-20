@@ -106,6 +106,15 @@ function StudentsPage() {
           </CardContent>
         </Card>
 
+        {studentFilter && (
+          <div className="lg:col-span-1 lg:col-start-1">
+            <StudentInsights
+              studentName={studentFilter}
+              studentEmail={selectedStudentEmail}
+            />
+          </div>
+        )}
+
         <Card className="card-soft lg:col-span-2">
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold">Submissions</h2>
