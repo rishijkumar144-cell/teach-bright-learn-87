@@ -308,24 +308,82 @@ function MemoryMatchGame({ questions, onExit }: { questions: StudyQA[]; onExit: 
 // ============================================================
 // Bomb Blast
 // ============================================================
+const TOTAL_LEVELS = 20;
+const LEVEL_SECONDS = 60;
+const WRONG_LOCK_MS = 5000;
+
+function wallSizeForLevel(level: number): number {
+  // Level 1: 8 bricks, Level 20: 27 bricks. 6-col grid.
+  return Math.min(30, 6 + level);
+}
+
 function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: () => void }) {
-  const [phase, setPhase] = useState<"answer" | "blast" | "done">("answer");
+  const [level, setLevel] = useState(1);
+  const [phase, setPhase] = useState<"play" | "levelClear" | "fail" | "won">("play");
   const [idx, setIdx] = useState(0);
   const [bombs, setBombs] = useState(0);
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState<null | "right" | "wrong">(null);
-  const [wall, setWall] = useState<boolean[]>(() => Array.from({ length: 24 }, () => true));
+  const [lockUntil, setLockUntil] = useState(0);
+  const [wall, setWall] = useState<boolean[]>(() => Array.from({ length: wallSizeForLevel(1) }, () => true));
+  const [deadline, setDeadline] = useState(() => Date.now() + LEVEL_SECONDS * 1000);
+  const [now, setNow] = useState(() => Date.now());
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const q = questions[idx];
+  const q = questions[idx % Math.max(1, questions.length)];
+  const locked = now < lockUntil;
+  const secondsLeft = Math.max(0, Math.ceil((deadline - now) / 1000));
+  const lockSecondsLeft = Math.max(0, Math.ceil((lockUntil - now) / 1000));
+
+  // Ticker
+  useEffect(() => {
+    if (phase !== "play") return;
+    const id = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  // Timeout → fail level
+  useEffect(() => {
+    if (phase === "play" && secondsLeft === 0) {
+      setPhase("fail");
+    }
+  }, [phase, secondsLeft]);
+
+  const startLevel = (lvl: number) => {
+    const size = wallSizeForLevel(lvl);
+    setLevel(lvl);
+    setWall(Array.from({ length: size }, () => true));
+    setBombs(0);
+    setStreak(0);
+    setInput("");
+    setFeedback(null);
+    setLockUntil(0);
+    setIdx((i) => i); // keep question rotation
+    setDeadline(Date.now() + LEVEL_SECONDS * 1000);
+    setNow(Date.now());
+    setPhase("play");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const restartLevel = () => startLevel(level);
+  const nextLevel = () => {
+    if (level >= TOTAL_LEVELS) setPhase("won");
+    else startLevel(level + 1);
+  };
+  const restartGame = () => {
+    setBestStreak(0);
+    startLevel(1);
+  };
 
   const check = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || locked || feedback) return;
     const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,!?;]$/g, "");
-    const correct = norm(input) === norm(q.a) || norm(q.a).includes(norm(input)) && norm(input).length >= 3;
-    if (correct) {
+    const isCorrect =
+      norm(input) === norm(q.a) ||
+      (norm(q.a).includes(norm(input)) && norm(input).length >= 3);
+    if (isCorrect) {
       setBombs((b) => b + 1);
       setStreak((s) => {
         const ns = s + 1;
@@ -338,20 +396,21 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
         setInput("");
         setIdx((i) => (i + 1) % questions.length);
         inputRef.current?.focus();
-      }, 700);
+      }, 500);
     } else {
       setStreak(0);
       setFeedback("wrong");
+      setLockUntil(Date.now() + WRONG_LOCK_MS);
       setTimeout(() => {
         setFeedback(null);
         setInput("");
         setIdx((i) => (i + 1) % questions.length);
-        inputRef.current?.focus();
-      }, 1400);
+      }, WRONG_LOCK_MS);
     }
   };
 
   const skip = () => {
+    if (locked || feedback) return;
     setStreak(0);
     setInput("");
     setIdx((i) => (i + 1) % questions.length);
@@ -359,53 +418,73 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
   };
 
   const detonateOne = (i: number) => {
+    if (phase !== "play") return;
     if (!wall[i] || bombs === 0) return;
+    const cols = 6;
     const nextWall = [...wall];
-    // Chain reaction: bomb blows its cell plus adjacent
-    const targets = [i, i - 1, i + 1, i - 6, i + 6, i - 7, i - 5, i + 5, i + 7];
+    const targets = [i, i - 1, i + 1, i - cols, i + cols, i - cols - 1, i - cols + 1, i + cols - 1, i + cols + 1];
     for (const t of targets) if (t >= 0 && t < nextWall.length) nextWall[t] = false;
     setWall(nextWall);
     setBombs((b) => b - 1);
     if (nextWall.every((c) => !c)) {
-      setTimeout(() => setPhase("done"), 400);
+      setTimeout(() => setPhase("levelClear"), 300);
     }
   };
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, [phase]);
-
   const bricksLeft = wall.filter(Boolean).length;
+  const timerColor = secondsLeft <= 10 ? "text-red-600 dark:text-red-400" : "text-foreground";
+
+  if (phase === "won") {
+    return (
+      <GameShell title="Bomb Blast" onExit={onExit} counter={`🏆 All ${TOTAL_LEVELS} levels cleared!`}>
+        <div className="mx-auto max-w-md rounded-3xl border-2 border-orange-500/40 bg-orange-500/10 p-8 text-center">
+          <Trophy className="mx-auto h-12 w-12 text-amber-500" />
+          <h3 className="mt-3 text-2xl font-bold">Legend!</h3>
+          <p className="mt-1 text-sm text-muted-foreground">You demolished every wall. Best streak: {bestStreak}.</p>
+          <Button onClick={restartGame} className="mt-4">
+            <RotateCcw className="mr-2 h-4 w-4" /> Play again
+          </Button>
+        </div>
+      </GameShell>
+    );
+  }
 
   return (
     <GameShell
       title="Bomb Blast"
       onExit={onExit}
-      counter={`💣 ${bombs}  ·  🔥 streak ${streak}  ·  Best ${bestStreak}`}
+      counter={`Level ${level}/${TOTAL_LEVELS}  ·  💣 ${bombs}  ·  🔥 ${streak}  ·  Best ${bestStreak}`}
     >
-      {phase === "done" ? (
-        <div className="mx-auto max-w-md rounded-3xl border-2 border-orange-500/40 bg-orange-500/10 p-8 text-center">
-          <Bomb className="mx-auto h-12 w-12 text-orange-600 dark:text-orange-400" />
-          <h3 className="mt-3 text-2xl font-bold">Wall demolished!</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Best streak: {bestStreak}</p>
-          <Button
-            onClick={() => {
-              setPhase("answer");
-              setIdx(0);
-              setBombs(0);
-              setStreak(0);
-              setBestStreak(0);
-              setWall(Array.from({ length: 24 }, () => true));
-            }}
-            className="mt-4"
-          >
-            <RotateCcw className="mr-2 h-4 w-4" /> Play again
+      {phase === "levelClear" ? (
+        <div className="mx-auto max-w-md rounded-3xl border-2 border-emerald-500/40 bg-emerald-500/10 p-8 text-center">
+          <Bomb className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
+          <h3 className="mt-3 text-2xl font-bold">Level {level} clear!</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {level >= TOTAL_LEVELS ? "Final wall down!" : `Next up: level ${level + 1} (${wallSizeForLevel(level + 1)} bricks).`}
+          </p>
+          <Button onClick={nextLevel} className="mt-4">
+            {level >= TOTAL_LEVELS ? "Finish" : "Next level"} <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+      ) : phase === "fail" ? (
+        <div className="mx-auto max-w-md rounded-3xl border-2 border-red-500/40 bg-red-500/10 p-8 text-center">
+          <Bomb className="mx-auto h-12 w-12 text-red-600 dark:text-red-400" />
+          <h3 className="mt-3 text-2xl font-bold">Out of time!</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {bricksLeft} brick{bricksLeft === 1 ? "" : "s"} still standing. Restart level {level} and try again.
+          </p>
+          <Button onClick={restartLevel} className="mt-4">
+            <RotateCcw className="mr-2 h-4 w-4" /> Restart level {level}
           </Button>
         </div>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_auto]">
           {/* Question card */}
           <div className="space-y-4">
+            <div className={cn("flex items-center justify-between rounded-xl border-2 px-4 py-2 text-sm font-bold", secondsLeft <= 10 ? "border-red-500/50 bg-red-500/10" : "border-border bg-muted/40")}>
+              <span className="text-muted-foreground">⏱ Time</span>
+              <span className={cn("text-lg tabular-nums", timerColor)}>0:{String(secondsLeft).padStart(2, "0")}</span>
+            </div>
             <Card className={cn("p-6 transition", feedback === "right" && "border-emerald-500/60 bg-emerald-500/10", feedback === "wrong" && "border-red-500/60 bg-red-500/10")}>
               <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Question {idx + 1}</div>
               <div className="mt-2 text-xl font-bold leading-snug">
@@ -417,20 +496,21 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && check()}
-                  placeholder="Type your answer…"
-                  disabled={feedback !== null}
+                  placeholder={locked ? `Locked · ${lockSecondsLeft}s…` : "Type your answer…"}
+                  disabled={feedback !== null || locked}
                 />
-                <Button onClick={check} disabled={feedback !== null}>
+                <Button onClick={check} disabled={feedback !== null || locked}>
                   Answer
                 </Button>
-                <Button variant="ghost" onClick={skip} disabled={feedback !== null}>
+                <Button variant="ghost" onClick={skip} disabled={feedback !== null || locked}>
                   Skip
                 </Button>
               </div>
               <AnimatePresence>
                 {feedback === "wrong" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3 rounded-lg bg-background/60 p-3 text-sm">
-                    <span className="font-semibold text-red-600 dark:text-red-400">Not quite.</span> Correct answer: <span className="font-semibold"><ParagraphWithMath text={q.a} /></span>
+                    <span className="font-semibold text-red-600 dark:text-red-400">Not quite — locked {lockSecondsLeft}s.</span>{" "}
+                    Correct answer: <span className="font-semibold"><ParagraphWithMath text={q.a} /></span>
                   </motion.div>
                 )}
                 {feedback === "right" && (
@@ -441,14 +521,14 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
               </AnimatePresence>
             </Card>
             <p className="text-xs text-muted-foreground">
-              Each correct answer earns you a bomb. Click bricks in the wall to detonate — bombs blast the target and its neighbors.
+              You have 1 minute per level. Correct answers earn bombs; wrong answers lock the input for 5 seconds. Fail the timer and you restart this level.
             </p>
           </div>
 
           {/* Wall */}
           <div className="space-y-2">
             <div className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Wall · {bricksLeft} bricks
+              Level {level} wall · {bricksLeft} bricks
             </div>
             <div className="grid grid-cols-6 gap-1 rounded-xl border-2 border-border bg-muted/30 p-2">
               {wall.map((alive, i) => (
@@ -476,6 +556,7 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
           </div>
         </div>
       )}
+
     </GameShell>
   );
 }
