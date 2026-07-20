@@ -676,6 +676,7 @@ function QuestionCard({
   isMissing,
   explanation,
   submitted,
+  revealed,
   onSubmit,
   canSubmit,
   submitLabel = "Submit",
@@ -688,6 +689,7 @@ function QuestionCard({
   isMissing?: boolean;
   explanation?: string;
   submitted?: boolean;
+  revealed?: boolean;
   onSubmit?: () => void;
   canSubmit?: boolean;
   submitLabel?: string;
