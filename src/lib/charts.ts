@@ -121,6 +121,17 @@ export type InteractiveSpec =
       yMax: number;
       tools: ToolKind[];
       minShapes: number;
+    }
+  | {
+      kind: "table";
+      title: string;
+      instructions: string;
+      rows: number;
+      cols: number;
+      // grid[r][c] = { value: pre-filled text (shown to student when !blank),
+      //               blank: true if student must fill this cell,
+      //               answer: optional expected answer (case-insensitive) }
+      cells: { value: string; blank: boolean; answer?: string }[][];
     };
 
 export type InteractiveKind = InteractiveSpec["kind"];
