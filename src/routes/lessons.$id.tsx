@@ -87,6 +87,8 @@ function LessonEditor() {
     return `${window.location.origin}/lesson/${draft.slug}`;
   }, [draft]);
 
+  const publishDisplayPath = draft ? `/lesson/${draft.slug}` : "";
+
   if (!lesson || !draft) {
     return (
       <TeacherLayout>
@@ -297,7 +299,7 @@ function LessonEditor() {
 
       {/* Publish modal */}
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
-        <DialogContent className="max-w-lg px-16 py-10 sm:px-20">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl px-8 py-10 sm:px-12 lg:px-16">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <motion.span
@@ -315,19 +317,22 @@ function LessonEditor() {
             <p className="text-sm text-muted-foreground">
               Share this link with your students. No login required — they can start instantly.
             </p>
-            <div className="rounded-xl border border-border bg-accent/40 p-3">
+            <div className="rounded-xl border border-border bg-accent/40 p-5">
               <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Student link
               </div>
-              <div className="mt-2 flex items-center gap-2">
-                <div className="min-w-0 flex-1 overflow-hidden rounded-lg border border-border bg-background px-3 py-2">
-                  <div className="truncate font-mono text-xs" title={publishUrl}>
-                    {publishUrl}
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="min-w-0 flex-1 rounded-lg border border-border bg-background px-4 py-3">
+                  <div className="truncate font-mono text-sm font-medium" title={publishUrl}>
+                    {publishDisplayPath}
                   </div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground" title={publishUrl}>
+                    Full link copied when you press Copy
+                  </p>
                 </div>
                 <Button
                   size="sm"
-                  className="shrink-0"
+                  className="shrink-0 sm:h-12 sm:px-5"
                   onClick={() => {
                     navigator.clipboard.writeText(publishUrl);
                     toast.success("Link copied");
