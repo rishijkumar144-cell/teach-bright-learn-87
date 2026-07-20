@@ -13,6 +13,7 @@ import { ParagraphWithMath } from "@/components/teacher/BlockEditor";
 export interface StudyQA {
   q: string;
   a: string;
+  answers?: string[];
 }
 
 interface GamePickerProps {
@@ -160,9 +161,13 @@ function FlashcardGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
               <p className="mt-2 text-xs text-muted-foreground">Tap card to reveal answer</p>
             </div>
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-500/15 to-teal-500/10 p-8 text-center [backface-visibility:hidden] [transform:rotateY(180deg)]">
-              <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Answer</span>
-              <div className="text-2xl font-bold leading-tight text-foreground">
-                <ParagraphWithMath text={q.a} />
+              <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                {(q.answers?.length ?? 0) > 1 ? "Accepted answers" : "Answer"}
+              </span>
+              <div className="text-2xl font-bold leading-tight text-foreground space-y-1">
+                {(q.answers && q.answers.length > 1 ? q.answers : [q.a]).map((ans, i) => (
+                  <div key={i}><ParagraphWithMath text={ans} /></div>
+                ))}
               </div>
             </div>
           </motion.div>
@@ -637,9 +642,12 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
   const check = () => {
     if (!input.trim() || locked || feedback) return;
     const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,!?;]$/g, "");
-    const isCorrect =
-      norm(input) === norm(q.a) ||
-      (norm(q.a).includes(norm(input)) && norm(input).length >= 3);
+    const accepted = (q.answers && q.answers.length ? q.answers : [q.a]).filter(Boolean);
+    const inNorm = norm(input);
+    const isCorrect = accepted.some((ans) => {
+      const a = norm(ans);
+      return inNorm === a || (a.includes(inNorm) && inNorm.length >= 3);
+    });
     if (isCorrect) {
       setBombs((b) => b + 1);
       setStreak((s) => {
@@ -776,7 +784,10 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
                 {feedback === "wrong" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3 rounded-lg bg-background/60 p-3 text-sm">
                     <span className="font-semibold text-red-600 dark:text-red-400">Not quite — locked {lockSecondsLeft}s.</span>{" "}
-                    Correct answer: <span className="font-semibold"><ParagraphWithMath text={q.a} /></span>
+                    {(q.answers?.length ?? 0) > 1 ? "Accepted answers" : "Correct answer"}:{" "}
+                    <span className="font-semibold">
+                      <ParagraphWithMath text={(q.answers && q.answers.length ? q.answers : [q.a]).join(", ")} />
+                    </span>
                   </motion.div>
                 )}
                 {feedback === "right" && (

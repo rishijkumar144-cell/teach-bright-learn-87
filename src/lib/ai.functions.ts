@@ -491,11 +491,19 @@ export const generateGameQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GameQuestionsInput.parse(input))
   .handler(async ({ data }) => {
-    const result = await callJson<{ questions: { q: string; a: string }[] }>(
-      "You generate flashcard-style study questions for students. Keep each question short (under 100 chars) and each answer to a single fact, number, or short phrase (under 60 chars). Use inline $...$ for math.",
-      `Generate ${data.count} short study Q&A pairs about: ${data.topic}. Mix easy and medium difficulty.`,
-      `{ "questions": [ { "q": string, "a": string }, ... ] }`,
+    const result = await callJson<{ questions: { q: string; a?: string; answers?: string[] }[] }>(
+      "You generate flashcard-style study questions for students. Keep each question short (under 100 chars) and each accepted answer to a single fact, number, or short phrase (under 60 chars). Use inline $...$ for math. When a question legitimately has multiple correct answers (synonyms, equivalent forms like '1/2' and '0.5', alternate spellings, or genuinely multiple valid solutions), include ALL of them in the answers array. If only one answer is correct, still return it as a single-element array.",
+      `Generate ${data.count} short study Q&A pairs about: ${data.topic}. Mix easy and medium difficulty. For each question, return an "answers" array containing every acceptable correct answer.`,
+      `{ "questions": [ { "q": string, "answers": [string, ...] }, ... ] }`,
     );
-    const qs = (result.questions ?? []).slice(0, data.count).filter((q) => q.q && q.a);
+    const qs = (result.questions ?? [])
+      .slice(0, data.count)
+      .map((q) => {
+        const answers = (q.answers && q.answers.length ? q.answers : q.a ? [q.a] : [])
+          .map((s) => String(s).trim())
+          .filter(Boolean);
+        return { q: q.q, a: answers[0] ?? "", answers };
+      })
+      .filter((q) => q.q && q.answers.length);
     return { questions: qs };
   });
