@@ -210,6 +210,25 @@ export function coordComplete(
   return shapes.length >= Math.max(1, spec.minShapes || 1);
 }
 
+export function tableComplete(
+  spec: Extract<InteractiveSpec, { kind: "table" }>,
+  value: unknown,
+): boolean {
+  const v = (value as Record<string, string> | undefined) ?? {};
+  for (let r = 0; r < spec.rows; r++) {
+    for (let c = 0; c < spec.cols; c++) {
+      const cell = spec.cells[r]?.[c];
+      if (!cell || !cell.blank) continue;
+      const got = (v[`${r},${c}`] ?? "").trim();
+      if (!got) return false;
+      if (cell.answer && cell.answer.trim()) {
+        if (got.toLowerCase() !== cell.answer.trim().toLowerCase()) return false;
+      }
+    }
+  }
+  return true;
+}
+
 export function interactiveComplete(spec: InteractiveSpec, value: unknown): boolean {
   switch (spec.kind) {
     case "fill-image":
@@ -224,6 +243,8 @@ export function interactiveComplete(spec: InteractiveSpec, value: unknown): bool
       return lineplotComplete(spec, value);
     case "coord":
       return coordComplete(spec, value);
+    case "table":
+      return tableComplete(spec, value);
   }
 }
 
