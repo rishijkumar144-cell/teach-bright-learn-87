@@ -24,6 +24,7 @@ export type Database = {
           grade_level: string
           id: string
           objectives: string
+          one_response_per_email: boolean
           owner_id: string
           published_at: string | null
           require_student_name: boolean
@@ -44,6 +45,7 @@ export type Database = {
           grade_level?: string
           id?: string
           objectives?: string
+          one_response_per_email?: boolean
           owner_id: string
           published_at?: string | null
           require_student_name?: boolean
@@ -64,6 +66,7 @@ export type Database = {
           grade_level?: string
           id?: string
           objectives?: string
+          one_response_per_email?: boolean
           owner_id?: string
           published_at?: string | null
           require_student_name?: boolean
@@ -115,6 +118,7 @@ export type Database = {
           lesson_id: string
           manual_score: number | null
           manual_total: number | null
+          student_email: string
           student_name: string
           submitted_at: string
         }
@@ -128,6 +132,7 @@ export type Database = {
           lesson_id: string
           manual_score?: number | null
           manual_total?: number | null
+          student_email?: string
           student_name?: string
           submitted_at?: string
         }
@@ -141,6 +146,7 @@ export type Database = {
           lesson_id?: string
           manual_score?: number | null
           manual_total?: number | null
+          student_email?: string
           student_name?: string
           submitted_at?: string
         }

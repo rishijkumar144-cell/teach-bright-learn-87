@@ -22,6 +22,7 @@ const SUBMITTABLE_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "num
 
 export interface LessonAttemptResult {
   studentName: string;
+  studentEmail: string;
   answers: Record<string, unknown>;
 }
 
@@ -78,6 +79,7 @@ export function LessonPlayer({
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
   const [nameGate, setNameGate] = useState(lesson.requireStudentName);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
   const [missing, setMissing] = useState<Set<string>>(new Set());
   const [pageIdx, setPageIdx] = useState(0);
@@ -133,7 +135,7 @@ export function LessonPlayer({
     }
     setMissing(new Set());
     setDone(true);
-    onFinish?.({ studentName: name, answers });
+    onFinish?.({ studentName: name, studentEmail: email, answers });
   };
 
   const submitBlock = (b: Block) => {
@@ -148,6 +150,8 @@ export function LessonPlayer({
   };
 
   if (nameGate) {
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    const canStart = name.trim().length > 0 && emailOk;
     return (
       <div className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center px-4 py-10">
         <motion.div
@@ -156,17 +160,26 @@ export function LessonPlayer({
           className="w-full rounded-3xl border border-border bg-card p-8 text-center shadow-lift"
         >
           <h1 className="text-2xl font-bold">{lesson.title}</h1>
-          <p className="mt-2 text-muted-foreground">Please enter your name to begin.</p>
+          <p className="mt-2 text-muted-foreground">
+            Please enter your name and email to begin.
+          </p>
           <Input
             className="mt-6 h-12 text-lg"
             placeholder="Your name"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+          <Input
+            className="mt-3 h-12 text-lg"
+            type="email"
+            placeholder="Your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
           <Button
             className="mt-4 h-12 w-full text-base"
-            onClick={() => name.trim() && setNameGate(false)}
-            disabled={!name.trim()}
+            onClick={() => canStart && setNameGate(false)}
+            disabled={!canStart}
           >
             Start lesson
           </Button>

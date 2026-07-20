@@ -238,14 +238,26 @@ function LessonEditor() {
               <div className="card-soft p-6 space-y-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="font-medium">Require student name</div>
+                    <div className="font-medium">Require student name & email</div>
                     <p className="text-sm text-muted-foreground">
-                      Ask students to enter their name before starting.
+                      Ask students to enter their name and email before starting.
                     </p>
                   </div>
                   <Switch
                     checked={draft.requireStudentName}
                     onCheckedChange={(v) => patch({ requireStudentName: v })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">One response per email</div>
+                    <p className="text-sm text-muted-foreground">
+                      Prevent the same email from submitting more than once.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={draft.oneResponsePerEmail}
+                    onCheckedChange={(v) => patch({ oneResponsePerEmail: v })}
                   />
                 </div>
                 <div className="border-t border-border pt-5">

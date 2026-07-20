@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Users, ChevronDown, ChevronUp, Save, Trash2 } from "lucide-react";
+import { Users, ChevronDown, ChevronUp, Save, Trash2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { TeacherLayout } from "@/components/teacher/TeacherLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -133,7 +133,8 @@ function StudentsPage() {
                               — {lesson?.title ?? "Deleted lesson"}
                             </span>
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="truncate text-xs text-muted-foreground">
+                            {s.studentEmail ? <span>{s.studentEmail} · </span> : null}
                             {formatDistanceToNow(s.submittedAt, { addSuffix: true })}
                           </div>
                         </div>
@@ -199,6 +200,7 @@ function SubmissionDetail({
   const [feedback, setFeedback] = useState<Record<string, { score?: number; comment?: string }>>(
     submission.feedback ?? {},
   );
+  const [showFull, setShowFull] = useState(false);
   const openBlocks = blocks.filter((b) => OPEN_TYPES.has(b.type));
   const answers = submission.answers as Record<string, unknown>;
 
@@ -219,75 +221,96 @@ function SubmissionDetail({
 
   return (
     <div className="border-t border-border bg-background/50 p-5 space-y-5">
+      {submission.studentEmail && (
+        <div className="text-sm text-muted-foreground">
+          Email: <span className="text-foreground">{submission.studentEmail}</span>
+        </div>
+      )}
+
       <div>
-        <h3 className="text-sm font-semibold">All answers</h3>
-        <ul className="mt-2 space-y-2 text-sm">
-          {blocks
-            .filter((b) =>
-              ["mcq", "checkbox", "short", "numeric", "truefalse", "open", "reflection", "interactive"].includes(
-                b.type,
-              ),
-            )
-            .map((b) => {
-              const d = b.data as Record<string, unknown>;
-              const ans = answers[b.id];
-              const label = (d.question ?? d.text ?? b.type) as string;
-              const hasAns =
-                ans !== undefined &&
-                ans !== null &&
-                ans !== "" &&
-                !(Array.isArray(ans) && ans.length === 0) &&
-                !(typeof ans === "object" && !Array.isArray(ans) && Object.keys(ans as object).length === 0);
-              if (!hasAns) return null;
-              let render: React.ReactNode;
-              if (b.type === "interactive" && d.spec) {
-                render = (
-                  <div className="mt-2 rounded-lg border border-border bg-background p-3">
-                    <InteractiveWidget
-                      spec={d.spec as InteractiveSpec}
-                      value={ans}
-                      onChange={() => {}}
-                      disabled
-                    />
-                  </div>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Full response</h3>
+          <Button variant="outline" size="sm" onClick={() => setShowFull((v) => !v)}>
+            {showFull ? (
+              <>
+                <EyeOff className="h-4 w-4" /> Hide full response
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4" /> Show full response
+              </>
+            )}
+          </Button>
+        </div>
+        {showFull && (
+          <ul className="mt-3 space-y-2 text-sm">
+            {blocks
+              .filter((b) =>
+                ["mcq", "checkbox", "short", "numeric", "truefalse", "open", "reflection", "interactive"].includes(
+                  b.type,
+                ),
+              )
+              .map((b) => {
+                const d = b.data as Record<string, unknown>;
+                const ans = answers[b.id];
+                const label = (d.question ?? d.text ?? b.type) as string;
+                const hasAns =
+                  ans !== undefined &&
+                  ans !== null &&
+                  ans !== "" &&
+                  !(Array.isArray(ans) && ans.length === 0) &&
+                  !(typeof ans === "object" && !Array.isArray(ans) && Object.keys(ans as object).length === 0);
+                let render: React.ReactNode;
+                if (!hasAns) {
+                  render = <span className="italic text-muted-foreground">No answer (skipped)</span>;
+                } else if (b.type === "interactive" && d.spec) {
+                  render = (
+                    <div className="mt-2 rounded-lg border border-border bg-background p-3">
+                      <InteractiveWidget
+                        spec={d.spec as InteractiveSpec}
+                        value={ans}
+                        onChange={() => {}}
+                        disabled
+                      />
+                    </div>
+                  );
+                } else if (b.type === "mcq" && typeof ans === "number") {
+                  render = ((d.options as string[]) ?? [])[ans] ?? String(ans);
+                } else if (b.type === "checkbox" && Array.isArray(ans)) {
+                  render = (ans as number[])
+                    .map((i) => ((d.options as string[]) ?? [])[i] ?? i)
+                    .join(", ");
+                } else if (b.type === "truefalse") {
+                  render = ans ? "True" : "False";
+                } else if (typeof ans === "object") {
+                  render = (
+                    <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-2 text-xs">
+                      {JSON.stringify(ans, null, 2)}
+                    </pre>
+                  );
+                } else {
+                  render = String(ans);
+                }
+                return (
+                  <li key={b.id} className="rounded-xl border border-border bg-card p-3">
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {b.type}
+                    </div>
+                    <div className="whitespace-pre-wrap font-medium">{label}</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      {b.type === "interactive" && hasAns ? (
+                        render
+                      ) : (
+                        <>Answer: <span className="text-foreground">{render}</span></>
+                      )}
+                    </div>
+                  </li>
                 );
-              } else if (b.type === "mcq" && typeof ans === "number") {
-                render = ((d.options as string[]) ?? [])[ans] ?? String(ans);
-              } else if (b.type === "checkbox" && Array.isArray(ans)) {
-                render = (ans as number[])
-                  .map((i) => ((d.options as string[]) ?? [])[i] ?? i)
-                  .join(", ");
-              } else if (b.type === "truefalse") {
-                render = ans ? "True" : "False";
-              } else if (typeof ans === "object") {
-                render = (
-                  <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-2 text-xs">
-                    {JSON.stringify(ans, null, 2)}
-                  </pre>
-                );
-              } else {
-                render = String(ans);
-              }
-              return (
-                <li key={b.id} className="rounded-xl border border-border bg-card p-3">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {b.type}
-                  </div>
-                  <div className="font-medium">{label}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">
-                    {b.type === "interactive" ? (
-                      render
-                    ) : (
-                      <>Answer: <span className="text-foreground">{render}</span></>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-        </ul>
-
-
+              })}
+          </ul>
+        )}
       </div>
+
 
       {openBlocks.length > 0 && (
         <div>
@@ -302,12 +325,23 @@ function SubmissionDetail({
               const fb = feedback[b.id] ?? {};
               return (
                 <li key={b.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="text-sm font-medium">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Question
+                  </div>
+                  <div className="mt-1 whitespace-pre-wrap text-base font-medium leading-relaxed">
                     {(d.question ?? d.text ?? "Open response") as string}
                   </div>
-                  <div className="mt-2 whitespace-pre-wrap rounded-lg bg-accent/40 p-3 text-sm">
+                  {typeof d.description === "string" && d.description.trim() ? (
+                    <div className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                      {d.description as string}
+                    </div>
+                  ) : null}
+                  <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">
+                    Student answer
+                  </div>
+                  <div className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-3 text-sm">
                     {typeof val === "string" && val.trim() ? val : (
-                      <span className="italic text-muted-foreground">No answer</span>
+                      <span className="italic text-muted-foreground">No answer (skipped)</span>
                     )}
                   </div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-[120px_1fr]">
