@@ -262,6 +262,14 @@ export function LessonPlayer({
         {pageIdx === 0 && lesson.description && (
           <p className="text-lg leading-relaxed text-muted-foreground">{lesson.description}</p>
         )}
+        {reviewMode && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
+            <div className="font-semibold text-primary">Reviewing your answers</div>
+            <p className="mt-1 text-muted-foreground">
+              Your responses have been submitted. Correct answers and solutions are shown below.
+            </p>
+          </div>
+        )}
         {pageBlocks.map((b) => (
           <div key={b.id} id={`block-${b.id}`}>
             <BlockRender
@@ -279,6 +287,7 @@ export function LessonPlayer({
               }}
               isMissing={missing.has(b.id)}
               submitted={!!submitted[b.id]}
+              reveal={revealSolutions}
               onSubmit={() => submitBlock(b)}
             />
           </div>
@@ -303,7 +312,7 @@ export function LessonPlayer({
             </Button>
           ) : (
             <Button size="lg" className="h-12 w-full text-base" onClick={handleFinish}>
-              Submit lesson
+              {reviewMode ? "Finish lesson" : "Submit lesson"}
             </Button>
           )}
         </div>
