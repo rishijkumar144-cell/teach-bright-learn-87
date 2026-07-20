@@ -784,7 +784,10 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
                 {feedback === "wrong" && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3 rounded-lg bg-background/60 p-3 text-sm">
                     <span className="font-semibold text-red-600 dark:text-red-400">Not quite — locked {lockSecondsLeft}s.</span>{" "}
-                    Correct answer: <span className="font-semibold"><ParagraphWithMath text={q.a} /></span>
+                    {(q.answers?.length ?? 0) > 1 ? "Accepted answers" : "Correct answer"}:{" "}
+                    <span className="font-semibold">
+                      <ParagraphWithMath text={(q.answers && q.answers.length ? q.answers : [q.a]).join(", ")} />
+                    </span>
                   </motion.div>
                 )}
                 {feedback === "right" && (
