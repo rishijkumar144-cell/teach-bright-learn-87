@@ -61,6 +61,7 @@ export interface Submission {
   lessonId: string;
   lessonTitle?: string;
   studentName: string;
+  studentEmail: string;
   answers: Record<string, unknown>;
   autoScore: number | null;
   autoTotal: number | null;
