@@ -56,16 +56,19 @@ function LessonEditor() {
     if (lesson && !draft) setDraft(lesson);
   }, [lesson, draft]);
 
-  // Autosave with debounce
+  // Autosave with debounce — depend only on draft so the effect doesn't
+  // cancel its own timeout when saveState transitions between renders.
   useEffect(() => {
-    if (!draft || saveState !== "dirty") return;
-    setSaveState("saving");
-    const t = setTimeout(() => {
-      updateLesson(draft.id, draft);
+    if (!draft) return;
+    if (saveState !== "dirty") return;
+    const t = setTimeout(async () => {
+      setSaveState("saving");
+      await updateLesson(draft.id, draft);
       setSaveState("saved");
-    }, 800);
+    }, 600);
     return () => clearTimeout(t);
-  }, [draft, saveState, updateLesson]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft, updateLesson]);
 
   const patch = (p: Partial<Lesson>) => {
     setDraft((d) => (d ? { ...d, ...p } : d));
