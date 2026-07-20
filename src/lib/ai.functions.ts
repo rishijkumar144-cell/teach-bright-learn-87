@@ -483,8 +483,9 @@ export const studyChat = createServerFn({ method: "POST" })
 
 const GameQuestionsInput = z.object({
   topic: z.string().min(1).max(200),
-  count: z.number().min(3).max(20).default(8),
+  count: z.number().min(3).max(30).default(25),
 });
+
 
 export const generateGameQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
