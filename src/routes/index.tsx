@@ -14,5 +14,6 @@ function Index() {
       </div>
     );
   }
-  return <Navigate to={teacher ? "/dashboard" : "/login"} />;
+  if (!teacher) return <Navigate to="/login" />;
+  return <Navigate to={teacher.role === "student" ? "/student" : "/dashboard"} />;
 }

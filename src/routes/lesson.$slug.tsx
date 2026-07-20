@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { rowToLesson } from "@/lib/lessonMap";
 import type { Lesson, Block } from "@/lib/types";
 import { LessonPlayer, type LessonAttemptResult } from "@/components/teacher/LessonPlayer";
+import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/lesson/$slug")({
   component: StudentLessonView,
@@ -40,6 +41,7 @@ function isCorrect(b: Block, value: unknown): boolean {
 
 function StudentLessonView() {
   const { slug } = Route.useParams();
+  const { teacher, refreshSubmissions } = useStore();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,7 +67,7 @@ function StudentLessonView() {
   const onFinish = async (result: LessonAttemptResult) => {
     if (!lesson) return;
     const { answers, studentName, studentEmail } = result;
-    const email = (studentEmail || "").trim().toLowerCase();
+    const email = (studentEmail || teacher?.email || "").trim().toLowerCase();
 
     if (lesson.oneResponsePerEmail && email) {
       const { data: existing, error: dupErr } = await supabase
@@ -89,19 +91,24 @@ function StudentLessonView() {
       autoTotal += 1;
       if (isCorrect(b, answers[b.id])) autoScore += 1;
     }
-    const { error } = await supabase.from("submissions").insert({
+    const payload: Record<string, unknown> = {
       lesson_id: lesson.id,
-      student_name: studentName || "Anonymous",
+      student_name: studentName || teacher?.displayName || "Anonymous",
       student_email: email,
-      answers: answers as never,
+      answers: answers,
       auto_score: autoScore,
       auto_total: autoTotal,
-    } as never);
+    };
+    if (teacher?.role === "student") {
+      payload.student_id = teacher.id;
+    }
+    const { error } = await supabase.from("submissions").insert(payload as never);
     if (error) {
       console.error(error);
       toast.error("Could not save your submission. Please try again.");
     } else {
       toast.success("Submitted!");
+      if (teacher?.role === "student") refreshSubmissions();
     }
   };
 
@@ -133,8 +140,13 @@ function StudentLessonView() {
       lesson={lesson}
       onFinish={onFinish}
       headerExtra={
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <GraduationCap className="h-3.5 w-3.5" /> Mathly
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {teacher?.role === "student" && (
+            <Link to="/student" className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 font-semibold text-foreground hover:bg-accent">
+              <ArrowLeft className="h-3 w-3" /> Portal
+            </Link>
+          )}
+          <span className="inline-flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5" /> Mathly</span>
         </div>
       }
     />

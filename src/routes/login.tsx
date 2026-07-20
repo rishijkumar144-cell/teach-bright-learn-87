@@ -18,6 +18,7 @@ function LoginPage() {
   const { signIn, signUp } = useStore();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  const [role, setRole] = useState<"teacher" | "student">("teacher");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -56,7 +57,7 @@ function LoginPage() {
     const res =
       mode === "signin"
         ? await signIn(email, password)
-        : await signUp(email, password, displayName.trim());
+        : await signUp(email, password, displayName.trim(), role);
     setLoading(false);
     if (res.error) {
       toast.error(res.error);
@@ -64,10 +65,11 @@ function LoginPage() {
     }
     if (mode === "signup") {
       toast.success("Account created — check your email to confirm.");
+      navigate({ to: role === "student" ? "/student" : "/dashboard" });
     } else {
       toast.success("Welcome back!");
+      navigate({ to: "/" });
     }
-    navigate({ to: "/dashboard" });
   };
 
 
@@ -129,34 +131,59 @@ function LoginPage() {
           </div>
           <h2 className="text-3xl font-bold tracking-tight">
             {mode === "signin"
-              ? "Sign in to your portal"
+              ? "Sign in to Mathly"
               : mode === "signup"
-                ? "Create your teacher account"
+                ? role === "student"
+                  ? "Create your student account"
+                  : "Create your teacher account"
                 : "Reset your password"}
           </h2>
           <p className="mt-2 text-muted-foreground">
             {mode === "signin"
-              ? "Continue building lessons your students will love."
+              ? "Teachers and students both sign in here."
               : mode === "signup"
-                ? "Set up your workspace in seconds."
+                ? role === "student"
+                  ? "Track your completed lessons and study smarter."
+                  : "Set up your workspace in seconds."
                 : "Enter your email and we'll send you a link to reset your password."}
           </p>
 
           <form onSubmit={onSubmit} className="mt-8 space-y-5">
             {mode === "signup" && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Your name</Label>
-                <div className="relative">
-                  <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    id="name"
-                    className="h-12 pl-10"
-                    placeholder="Ms. Rivera"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                  />
+              <>
+                <div className="space-y-2">
+                  <Label>I am a…</Label>
+                  <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-muted/40 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setRole("teacher")}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${role === "teacher" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Teacher
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRole("student")}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${role === "student" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      Student
+                    </button>
+                  </div>
                 </div>
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Your name</Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      className="h-12 pl-10"
+                      placeholder={role === "student" ? "Alex Chen" : "Ms. Rivera"}
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

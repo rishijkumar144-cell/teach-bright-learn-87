@@ -25,6 +25,7 @@ interface LessonRow {
 interface SubmissionRow {
   id: string;
   lesson_id: string;
+  student_id?: string | null;
   student_name: string;
   student_email?: string;
   answers: unknown;
