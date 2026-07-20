@@ -200,30 +200,77 @@ function SubmissionDetail({
   onGrade: (patch: {
     manualScore?: number | null;
     manualTotal?: number | null;
-    feedback?: Record<string, { score?: number; comment?: string }>;
+    feedback?: Record<string, { score?: number; comment?: string; excused?: boolean }>;
   }) => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
-  const [feedback, setFeedback] = useState<Record<string, { score?: number; comment?: string }>>(
-    submission.feedback ?? {},
-  );
+  const [feedback, setFeedback] = useState<
+    Record<string, { score?: number; comment?: string; excused?: boolean }>
+  >(submission.feedback ?? {});
   const [showFull, setShowFull] = useState(false);
-  const openBlocks = blocks.filter((b) => OPEN_TYPES.has(b.type));
+  const gradedBlocks = blocks.filter((b) => GRADED_TYPES.has(b.type));
   const answers = submission.answers as Record<string, unknown>;
 
-  const totalManual = openBlocks.length;
-  const scoreManual = Object.values(feedback).reduce(
-    (a, f) => a + (typeof f.score === "number" ? f.score : 0),
-    0,
-  );
+  const earned = gradedBlocks.reduce((sum, b) => {
+    const fb = feedback[b.id];
+    if (fb?.excused) return sum;
+    return sum + (typeof fb?.score === "number" ? fb.score : 0);
+  }, 0);
+  const totalPossible = gradedBlocks.reduce((sum, b) => {
+    const fb = feedback[b.id];
+    if (fb?.excused) return sum;
+    return sum + blockPoints(b);
+  }, 0);
+  const percent = totalPossible > 0 ? Math.round((earned / totalPossible) * 1000) / 10 : null;
 
   const save = async () => {
     await onGrade({
-      manualScore: scoreManual,
-      manualTotal: totalManual,
+      manualScore: earned,
+      manualTotal: totalPossible,
       feedback,
     });
     toast.success("Graded and saved");
+  };
+
+  const renderAnswer = (b: Block): React.ReactNode => {
+    const d = b.data as Record<string, unknown>;
+    const ans = answers[b.id];
+    const hasAns =
+      ans !== undefined &&
+      ans !== null &&
+      ans !== "" &&
+      !(Array.isArray(ans) && ans.length === 0) &&
+      !(typeof ans === "object" && !Array.isArray(ans) && Object.keys(ans as object).length === 0);
+    if (!hasAns) return <span className="italic text-muted-foreground">No answer (skipped)</span>;
+    if (b.type === "interactive" && d.spec) {
+      return (
+        <div className="mt-2 rounded-lg border border-border bg-background p-3">
+          <InteractiveWidget
+            spec={d.spec as InteractiveSpec}
+            value={ans}
+            onChange={() => {}}
+            disabled
+          />
+        </div>
+      );
+    }
+    if (b.type === "mcq" && typeof ans === "number") {
+      return ((d.options as string[]) ?? [])[ans] ?? String(ans);
+    }
+    if (b.type === "checkbox" && Array.isArray(ans)) {
+      return (ans as number[])
+        .map((i) => ((d.options as string[]) ?? [])[i] ?? i)
+        .join(", ");
+    }
+    if (b.type === "truefalse") return ans ? "True" : "False";
+    if (typeof ans === "object") {
+      return (
+        <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-2 text-xs">
+          {JSON.stringify(ans, null, 2)}
+        </pre>
+      );
+    }
+    return String(ans);
   };
 
   return (
@@ -259,45 +306,9 @@ function SubmissionDetail({
               )
               .map((b) => {
                 const d = b.data as Record<string, unknown>;
-                const ans = answers[b.id];
                 const label = (d.question ?? d.text ?? b.type) as string;
-                const hasAns =
-                  ans !== undefined &&
-                  ans !== null &&
-                  ans !== "" &&
-                  !(Array.isArray(ans) && ans.length === 0) &&
-                  !(typeof ans === "object" && !Array.isArray(ans) && Object.keys(ans as object).length === 0);
-                let render: React.ReactNode;
-                if (!hasAns) {
-                  render = <span className="italic text-muted-foreground">No answer (skipped)</span>;
-                } else if (b.type === "interactive" && d.spec) {
-                  render = (
-                    <div className="mt-2 rounded-lg border border-border bg-background p-3">
-                      <InteractiveWidget
-                        spec={d.spec as InteractiveSpec}
-                        value={ans}
-                        onChange={() => {}}
-                        disabled
-                      />
-                    </div>
-                  );
-                } else if (b.type === "mcq" && typeof ans === "number") {
-                  render = ((d.options as string[]) ?? [])[ans] ?? String(ans);
-                } else if (b.type === "checkbox" && Array.isArray(ans)) {
-                  render = (ans as number[])
-                    .map((i) => ((d.options as string[]) ?? [])[i] ?? i)
-                    .join(", ");
-                } else if (b.type === "truefalse") {
-                  render = ans ? "True" : "False";
-                } else if (typeof ans === "object") {
-                  render = (
-                    <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-2 text-xs">
-                      {JSON.stringify(ans, null, 2)}
-                    </pre>
-                  );
-                } else {
-                  render = String(ans);
-                }
+                const rendered = renderAnswer(b);
+                const isInteractive = b.type === "interactive";
                 return (
                   <li key={b.id} className="rounded-xl border border-border bg-card p-3">
                     <div className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -305,10 +316,10 @@ function SubmissionDetail({
                     </div>
                     <div className="whitespace-pre-wrap font-medium">{label}</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      {b.type === "interactive" && hasAns ? (
-                        render
+                      {isInteractive ? (
+                        rendered
                       ) : (
-                        <>Answer: <span className="text-foreground">{render}</span></>
+                        <>Answer: <span className="text-foreground">{rendered}</span></>
                       )}
                     </div>
                   </li>
@@ -318,47 +329,68 @@ function SubmissionDetail({
         )}
       </div>
 
-
-      {openBlocks.length > 0 && (
+      {gradedBlocks.length > 0 && (
         <div>
-          <h3 className="text-sm font-semibold">Grade open-ended answers</h3>
+          <h3 className="text-sm font-semibold">Grade questions</h3>
           <p className="text-xs text-muted-foreground">
-            Score each answer out of 1 and leave optional feedback.
+            Enter points earned for each question, or mark it excused to exclude it from the total.
           </p>
           <ul className="mt-3 space-y-3">
-            {openBlocks.map((b) => {
+            {gradedBlocks.map((b) => {
               const d = b.data as Record<string, unknown>;
-              const val = answers[b.id];
               const fb = feedback[b.id] ?? {};
+              const max = blockPoints(b);
+              const excused = !!fb.excused;
               return (
                 <li key={b.id} className="rounded-xl border border-border bg-card p-4">
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Question
-                  </div>
-                  <div className="mt-1 whitespace-pre-wrap text-base font-medium leading-relaxed">
-                    {(d.question ?? d.text ?? "Open response") as string}
-                  </div>
-                  {typeof d.description === "string" && d.description.trim() ? (
-                    <div className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
-                      {d.description as string}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {b.type} · worth {max} pt{max === 1 ? "" : "s"}
+                      </div>
+                      <div className="mt-1 whitespace-pre-wrap text-base font-medium leading-relaxed">
+                        {(d.question ?? d.text ?? "Question") as string}
+                      </div>
+                      {typeof d.description === "string" && d.description.trim() ? (
+                        <div className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                          {d.description as string}
+                        </div>
+                      ) : null}
                     </div>
-                  ) : null}
+                    <label className="flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-1.5">
+                      <Switch
+                        checked={excused}
+                        onCheckedChange={(v) =>
+                          setFeedback((prev) => ({
+                            ...prev,
+                            [b.id]: { ...prev[b.id], excused: v },
+                          }))
+                        }
+                      />
+                      <span className="text-xs font-medium">Excused</span>
+                    </label>
+                  </div>
+
                   <div className="mt-3 text-xs uppercase tracking-wide text-muted-foreground">
                     Student answer
                   </div>
                   <div className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-3 text-sm">
-                    {typeof val === "string" && val.trim() ? val : (
-                      <span className="italic text-muted-foreground">No answer (skipped)</span>
-                    )}
+                    {renderAnswer(b)}
                   </div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-[120px_1fr]">
+
+                  <div
+                    className={`mt-3 grid gap-3 sm:grid-cols-[160px_1fr] ${
+                      excused ? "opacity-50" : ""
+                    }`}
+                  >
                     <div>
-                      <Label className="text-xs">Score (0–1)</Label>
+                      <Label className="text-xs">Points earned (0–{max})</Label>
                       <Input
                         type="number"
-                        step={0.1}
+                        step={0.5}
                         min={0}
-                        max={1}
+                        max={max}
+                        disabled={excused}
                         value={fb.score ?? ""}
                         onChange={(e) => {
                           const v = e.target.value;
@@ -366,7 +398,10 @@ function SubmissionDetail({
                             ...prev,
                             [b.id]: {
                               ...prev[b.id],
-                              score: v === "" ? undefined : Number(v),
+                              score:
+                                v === ""
+                                  ? undefined
+                                  : Math.max(0, Math.min(max, Number(v))),
                             },
                           }));
                         }}
@@ -391,10 +426,16 @@ function SubmissionDetail({
               );
             })}
           </ul>
-          <div className="mt-4 flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">
-              Manual total: <span className="font-medium text-foreground">{scoreManual}</span> /{" "}
-              {totalManual}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-accent/30 p-4">
+            <div className="text-sm">
+              <div className="text-muted-foreground">
+                Earned{" "}
+                <span className="font-semibold text-foreground">{earned}</span>{" "}
+                / {totalPossible} non-excused points
+              </div>
+              <div className="mt-0.5 text-2xl font-bold tracking-tight">
+                {percent === null ? "—" : `${percent}%`}
+              </div>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={onDelete}>
@@ -408,7 +449,7 @@ function SubmissionDetail({
         </div>
       )}
 
-      {openBlocks.length === 0 && (
+      {gradedBlocks.length === 0 && (
         <div className="flex justify-end">
           <Button variant="outline" onClick={onDelete}>
             <Trash2 className="h-4 w-4" /> Delete
@@ -418,3 +459,4 @@ function SubmissionDetail({
     </div>
   );
 }
+
