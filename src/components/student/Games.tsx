@@ -642,9 +642,12 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
   const check = () => {
     if (!input.trim() || locked || feedback) return;
     const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,!?;]$/g, "");
-    const isCorrect =
-      norm(input) === norm(q.a) ||
-      (norm(q.a).includes(norm(input)) && norm(input).length >= 3);
+    const accepted = (q.answers && q.answers.length ? q.answers : [q.a]).filter(Boolean);
+    const inNorm = norm(input);
+    const isCorrect = accepted.some((ans) => {
+      const a = norm(ans);
+      return inNorm === a || (a.includes(inNorm) && inNorm.length >= 3);
+    });
     if (isCorrect) {
       setBombs((b) => b + 1);
       setStreak((s) => {
