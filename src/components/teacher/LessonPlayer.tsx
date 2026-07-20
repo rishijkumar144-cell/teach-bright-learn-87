@@ -81,8 +81,11 @@ export function LessonPlayer({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
   const [missing, setMissing] = useState<Set<string>>(new Set());
   const [pageIdx, setPageIdx] = useState(0);
+
+  const revealSolutions = lesson.solutionTiming !== "end" || reviewMode;
 
   const pages = useMemo(() => paginate(lesson.blocks), [lesson.blocks]);
   const currentPage = pages[pageIdx] ?? [];
