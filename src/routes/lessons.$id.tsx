@@ -311,7 +311,7 @@ function LessonEditor() {
               Lesson published
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6 pt-2">
             <p className="text-sm text-muted-foreground">
               Share this link with your students. No login required — they can start instantly.
             </p>
