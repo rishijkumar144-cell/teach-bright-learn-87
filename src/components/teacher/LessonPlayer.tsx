@@ -661,7 +661,6 @@ function BlockRender({
           onChange={onChange}
           onSubmit={onSubmit}
           submitted={submitted}
-          revealed={revealed}
           isMissing={isMissing}
         />
       );
@@ -728,8 +727,8 @@ function QuestionCard({
           </Button>
         </div>
       )}
-      {submitted && extra}
-      {submitted && explanation && (
+      {revealed && extra}
+      {revealed && explanation && (
         <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
             {submitLabel === "Submit answer" ? "Sample solution" : "Explanation"}
