@@ -67,7 +67,7 @@ export interface Submission {
   autoTotal: number | null;
   manualScore: number | null;
   manualTotal: number | null;
-  feedback: Record<string, { score?: number; comment?: string }>;
+  feedback: Record<string, { score?: number; comment?: string; excused?: boolean }>;
   submittedAt: number;
   gradedAt: number | null;
 }
