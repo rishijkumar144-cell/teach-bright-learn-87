@@ -60,6 +60,7 @@ export const GRADED_TYPES = new Set<BlockType>([
 ]);
 
 import { cn } from "@/lib/utils";
+import { AiGenerateButton } from "./AiGenerateButton";
 import { MathPreview } from "./MathPreview";
 import type {
   DrawShape,
