@@ -200,6 +200,7 @@ function SubmissionDetail({
   const [feedback, setFeedback] = useState<Record<string, { score?: number; comment?: string }>>(
     submission.feedback ?? {},
   );
+  const [showFull, setShowFull] = useState(false);
   const openBlocks = blocks.filter((b) => OPEN_TYPES.has(b.type));
   const answers = submission.answers as Record<string, unknown>;
 
