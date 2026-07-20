@@ -25,6 +25,7 @@ interface SubmissionRow {
   id: string;
   lesson_id: string;
   student_name: string;
+  student_email?: string;
   answers: unknown;
   auto_score: number | null;
   auto_total: number | null;
