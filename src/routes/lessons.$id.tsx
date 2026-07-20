@@ -315,17 +315,27 @@ function LessonEditor() {
             <p className="text-sm text-muted-foreground">
               Share this link with your students. No login required — they can start instantly.
             </p>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-accent/40 p-3">
-              <code className="min-w-0 flex-1 truncate text-sm">{publishUrl}</code>
-              <Button
-                size="sm"
-                onClick={() => {
-                  navigator.clipboard.writeText(publishUrl);
-                  toast.success("Link copied");
-                }}
-              >
-                <Copy className="h-4 w-4" /> Copy
-              </Button>
+            <div className="rounded-xl border border-border bg-accent/40 p-3">
+              <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Student link
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <div className="min-w-0 flex-1 overflow-hidden rounded-lg border border-border bg-background px-3 py-2">
+                  <div className="truncate font-mono text-xs" title={publishUrl}>
+                    {publishUrl}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => {
+                    navigator.clipboard.writeText(publishUrl);
+                    toast.success("Link copied");
+                  }}
+                >
+                  <Copy className="h-4 w-4" /> Copy
+                </Button>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Button variant="outline" asChild>
