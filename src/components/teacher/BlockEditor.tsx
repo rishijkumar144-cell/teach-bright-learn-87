@@ -892,18 +892,28 @@ function ParagraphEditor({
 
 
 export function ParagraphWithMath({ text }: { text: string }) {
-  const parts = (text ?? "").split(/(\$[^$\n]+\$)/g);
+  // Normalize LaTeX delimiters the AI sometimes emits:
+  //   \( x \)  →  $x$
+  //   \[ x \]  →  $$x$$
+  //   $$x$$ display math is preserved as its own token
+  const normalized = (text ?? "")
+    .replace(/\\\(/g, "$")
+    .replace(/\\\)/g, "$")
+    .replace(/\\\[/g, "$$")
+    .replace(/\\\]/g, "$$");
+  // Split on $$...$$ (display) and $...$ (inline). Allow newlines inside.
+  const parts = normalized.split(/(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g);
   return (
     <>
       {parts.map((p, i) => {
+        if (p.startsWith("$$") && p.endsWith("$$") && p.length >= 4) {
+          return (
+            <MathPreview key={i} equation={p.slice(2, -2)} displayMode={false} className="mx-0.5" />
+          );
+        }
         if (p.length >= 2 && p.startsWith("$") && p.endsWith("$")) {
           return (
-            <MathPreview
-              key={i}
-              equation={p.slice(1, -1)}
-              displayMode={false}
-              className="mx-0.5"
-            />
+            <MathPreview key={i} equation={p.slice(1, -1)} displayMode={false} className="mx-0.5" />
           );
         }
         return <span key={i}>{p}</span>;
@@ -911,6 +921,7 @@ export function ParagraphWithMath({ text }: { text: string }) {
     </>
   );
 }
+
 
 function ImageBlockEditor({
   d,
