@@ -48,6 +48,17 @@ import {
 } from "@/components/ui/popover";
 import { newBlockId } from "@/lib/store";
 import type { Block, BlockType } from "@/lib/types";
+
+export const GRADED_TYPES = new Set<BlockType>([
+  "mcq",
+  "checkbox",
+  "truefalse",
+  "short",
+  "numeric",
+  "open",
+  "interactive",
+]);
+
 import { cn } from "@/lib/utils";
 import { MathPreview } from "./MathPreview";
 import type {
