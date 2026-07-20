@@ -197,13 +197,24 @@ function MemoryMatchGame({ questions, onExit }: { questions: StudyQA[]; onExit: 
   const [flipped, setFlipped] = useState<string[]>([]);
   const [matched, setMatched] = useState<Set<number>>(new Set());
   const [moves, setMoves] = useState(0);
+  const [startAt, setStartAt] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const lockRef = useRef(false);
+  const done = matched.size === Math.min(6, questions.length);
+
+  useEffect(() => {
+    if (done) return;
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [done]);
 
   const reset = () => {
     setCards(shuffle(initial));
     setFlipped([]);
     setMatched(new Set());
     setMoves(0);
+    setStartAt(Date.now());
+    setNow(Date.now());
   };
 
   const onFlip = (card: MemoryCard) => {
@@ -235,15 +246,18 @@ function MemoryMatchGame({ questions, onExit }: { questions: StudyQA[]; onExit: 
     }
   };
 
-  const done = matched.size === Math.min(6, questions.length);
+  const elapsed = Math.floor((now - startAt) / 1000);
+  const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
+  const ss = String(elapsed % 60).padStart(2, "0");
+  const total = Math.min(6, questions.length);
 
   return (
-    <GameShell title="Memory Match" onExit={onExit} counter={`Moves: ${moves} · Matched ${matched.size}/${Math.min(6, questions.length)}`}>
+    <GameShell title="Memory Match" onExit={onExit} counter={`⏱ ${mm}:${ss}  ·  Moves: ${moves}  ·  Matched ${matched.size}/${total}`}>
       {done ? (
         <div className="mx-auto max-w-md rounded-3xl border-2 border-emerald-500/40 bg-emerald-500/10 p-8 text-center">
           <Trophy className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
           <h3 className="mt-3 text-2xl font-bold">All matched!</h3>
-          <p className="mt-1 text-sm text-muted-foreground">You cleared the board in {moves} moves.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Cleared in {mm}:{ss} · {moves} moves.</p>
           <Button onClick={reset} className="mt-4">
             <RotateCcw className="mr-2 h-4 w-4" /> Play again
           </Button>
@@ -289,6 +303,7 @@ function MemoryMatchGame({ questions, onExit }: { questions: StudyQA[]; onExit: 
     </GameShell>
   );
 }
+
 
 // ============================================================
 // Bomb Blast
