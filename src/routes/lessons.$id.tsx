@@ -297,7 +297,7 @@ function LessonEditor() {
 
       {/* Publish modal */}
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg p-8 sm:p-10">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <motion.span
