@@ -102,13 +102,22 @@ function BarChart({ spec }: { spec: Extract<StaticSpec, { kind: "bar" }> }) {
     <ChartFrame title={spec.title}>
       <div className="flex h-48 items-end gap-2">
         {spec.categories.map((c, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center gap-1">
+          <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
             <div className="text-[10px] text-muted-foreground">
               {c.value}
               {spec.unit ?? ""}
             </div>
-            <div className="w-full rounded-t bg-primary/70" style={{ height: `${(c.value / max) * 100}%` }} />
-            <div className="truncate text-[10px]">{c.label}</div>
+            <div
+              className="w-full rounded-t bg-primary/70"
+              style={{ height: `${(c.value / max) * 100}%`, minHeight: 2 }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex gap-2">
+        {spec.categories.map((c, i) => (
+          <div key={i} className="flex-1 truncate text-center text-[10px]">
+            {c.label}
           </div>
         ))}
       </div>
@@ -468,17 +477,28 @@ export function InteractiveBarPreview({
 }) {
   const m = Math.max(max, ...categories.map((c) => c.target), 1);
   return (
-    <div className="flex h-40 items-end gap-2">
-      {categories.map((c, i) => (
-        <div key={i} className="flex flex-1 flex-col items-center gap-1">
-          <div className="text-[10px] text-muted-foreground">
-            {c.target}
-            {unit ?? ""}
+    <div>
+      <div className="flex h-40 items-end gap-2">
+        {categories.map((c, i) => (
+          <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+            <div className="text-[10px] text-muted-foreground">
+              {c.target}
+              {unit ?? ""}
+            </div>
+            <div
+              className="w-full rounded-t bg-primary/70"
+              style={{ height: `${(c.target / m) * 100}%`, minHeight: 2 }}
+            />
           </div>
-          <div className="w-full rounded-t bg-primary/70" style={{ height: `${(c.target / m) * 100}%` }} />
-          <div className="truncate text-[10px]">{c.label}</div>
-        </div>
-      ))}
+        ))}
+      </div>
+      <div className="mt-1 flex gap-2">
+        {categories.map((c, i) => (
+          <div key={i} className="flex-1 truncate text-center text-[10px]">
+            {c.label}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
