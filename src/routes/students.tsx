@@ -607,7 +607,7 @@ function StudentInsights({ studentName, studentEmail }: { studentName: string; s
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Coach's summary
               </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{result.summary}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed"><ParagraphWithMath text={result.summary} /></p>
             </div>
 
             {result.mistakes.length > 0 && (
