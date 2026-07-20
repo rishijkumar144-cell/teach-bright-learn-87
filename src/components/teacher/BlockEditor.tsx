@@ -1184,7 +1184,20 @@ const INTERACTIVE_KINDS: { kind: InteractiveSpec["kind"]; label: string; Icon: t
   { kind: "lineplot", label: "Plot line plot", Icon: LineIcon },
   { kind: "coord", label: "Coordinate plane", Icon: Grid3x3 },
   { kind: "fill-image", label: "Fill image labels", Icon: MapPin },
+  { kind: "table", label: "Fill table cells", Icon: TableIcon },
 ];
+
+function makeTableCells(rows: number, cols: number, prev?: { value: string; blank: boolean; answer?: string }[][]) {
+  const out: { value: string; blank: boolean; answer?: string }[][] = [];
+  for (let r = 0; r < rows; r++) {
+    const row: { value: string; blank: boolean; answer?: string }[] = [];
+    for (let c = 0; c < cols; c++) {
+      row.push(prev?.[r]?.[c] ?? { value: "", blank: false });
+    }
+    out.push(row);
+  }
+  return out;
+}
 
 function defaultInteractiveSpec(kind: InteractiveSpec["kind"]): InteractiveSpec {
   switch (kind) {
@@ -1200,6 +1213,19 @@ function defaultInteractiveSpec(kind: InteractiveSpec["kind"]): InteractiveSpec 
       return { kind: "coord", title: "Draw the shape", instructions: "Use the tools to draw.", xMin: -5, xMax: 5, yMin: -5, yMax: 5, tools: ["point", "line"], minShapes: 1 };
     case "fill-image":
       return { kind: "fill-image", title: "Label the diagram", instructions: "Fill in every label.", imageUrl: "", pins: [] };
+    case "table":
+      return {
+        kind: "table",
+        title: "Complete the table",
+        instructions: "Fill in every highlighted cell.",
+        rows: 3,
+        cols: 3,
+        cells: makeTableCells(3, 3, [
+          [{ value: "x", blank: false }, { value: "1", blank: false }, { value: "2", blank: false }],
+          [{ value: "y", blank: false }, { value: "", blank: true, answer: "2" }, { value: "", blank: true, answer: "4" }],
+          [{ value: "y = 2x", blank: false }, { value: "", blank: false }, { value: "", blank: false }],
+        ]),
+      };
   }
 }
 
