@@ -412,6 +412,14 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
       }[block.type];
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          {block.type === "hint" && (
+            <div className="mb-2 flex justify-end">
+              <AiGenerateButton
+                kind="hint"
+                onGenerated={(r) => onChange({ text: String(r.text ?? "") })}
+              />
+            </div>
+          )}
           <Textarea
             value={d[key] ?? ""}
             onChange={(e) => onChange({ [key]: e.target.value })}
