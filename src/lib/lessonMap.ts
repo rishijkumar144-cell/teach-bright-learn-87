@@ -84,6 +84,7 @@ export function rowToSubmission(row: SubmissionRow): Submission {
     id: row.id,
     lessonId: row.lesson_id,
     studentName: row.student_name,
+    studentEmail: row.student_email ?? "",
     answers: (row.answers as Record<string, unknown>) ?? {},
     autoScore: row.auto_score,
     autoTotal: row.auto_total,
