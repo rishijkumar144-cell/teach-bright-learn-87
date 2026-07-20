@@ -1,12 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { motion } from "motion/react";
-import { GraduationCap, Mail, Lock, Sparkles, User as UserIcon } from "lucide-react";
+import { GraduationCap, Mail, Lock, Sparkles, User as UserIcon, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
+import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
