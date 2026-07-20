@@ -137,8 +137,17 @@ export function LessonPlayer({
       return;
     }
     setMissing(new Set());
+    // In "end" mode, reveal all solutions in a review view before the completion screen.
+    if (lesson.solutionTiming === "end" && !reviewMode) {
+      setReviewMode(true);
+      setPageIdx(0);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      onFinish?.({ studentName: name, studentEmail: email, answers });
+      toast.success("Answers submitted — review the solutions below.");
+      return;
+    }
     setDone(true);
-    onFinish?.({ studentName: name, studentEmail: email, answers });
+    if (!reviewMode) onFinish?.({ studentName: name, studentEmail: email, answers });
   };
 
   const submitBlock = (b: Block) => {
