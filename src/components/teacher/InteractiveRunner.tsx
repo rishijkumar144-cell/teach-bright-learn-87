@@ -9,8 +9,26 @@ import type {
   InteractiveSpec,
   ToolKind,
 } from "@/lib/charts";
-import { interactiveComplete, SLICE_COLORS } from "@/lib/charts";
+import { SLICE_COLORS } from "@/lib/charts";
 import { CoordinateGrid } from "./Charts";
+
+function interactiveAttempted(spec: InteractiveSpec, value: unknown): boolean {
+  switch (spec.kind) {
+    case "fill-image": {
+      const v = (value as Record<string, string> | undefined) ?? {};
+      return spec.pins.every((p) => (v[p.id] ?? "").trim().length > 0);
+    }
+    case "bar":
+    case "pie":
+      return Array.isArray(value) && (value as number[]).length > 0;
+    case "line":
+      return Array.isArray(value) && (value as unknown[]).length > 0;
+    case "lineplot":
+      return Array.isArray(value) && (value as unknown[]).length > 0;
+    case "coord":
+      return Array.isArray(value) && (value as unknown[]).length >= Math.max(1, spec.minShapes || 1);
+  }
+}
 
 export function InteractiveRunner({
   spec,
@@ -27,7 +45,7 @@ export function InteractiveRunner({
   submitted: boolean;
   isMissing?: boolean;
 }) {
-  const canSubmit = interactiveComplete(spec, value);
+  const canSubmit = interactiveAttempted(spec, value);
   return (
     <div
       className={cn(

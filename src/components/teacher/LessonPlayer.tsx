@@ -40,7 +40,11 @@ function hasAnswer(block: Block, value: unknown): boolean {
     case "interactive": {
       const spec = (block.data as Record<string, unknown>).spec as InteractiveSpec | null;
       if (!spec) return true;
-      return interactiveComplete(spec, value);
+      // Consider any non-empty interaction as "answered" so students can submit.
+      if (value == null) return false;
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === "object") return Object.keys(value as object).length > 0;
+      return true;
     }
     default:
       return true;
