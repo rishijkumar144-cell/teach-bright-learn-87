@@ -84,11 +84,18 @@ export const generateBlockContent = createServerFn({ method: "POST" })
           `Write ONE multiple-choice question about: ${data.topic}. Provide exactly 4 answer options, mark which index (0-3) is correct, and include a short explanation of why it is correct.`,
           `{ "question": string, "options": [string, string, string, string], "correct": 0|1|2|3, "explanation": string }`,
         );
-        // Clamp
         const options = (result.options ?? []).slice(0, 4);
         while (options.length < 4) options.push("");
-        const correct = Math.max(0, Math.min(3, result.correct ?? 0));
-        return { question: result.question ?? "", options, correct, explanation: result.explanation ?? "" };
+        let correct = Math.max(0, Math.min(3, result.correct ?? 0));
+        // Shuffle so the correct answer isn't biased to any particular slot
+        const indices = [0, 1, 2, 3];
+        for (let i = indices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [indices[i], indices[j]] = [indices[j], indices[i]];
+        }
+        const shuffledOptions = indices.map((i) => options[i]);
+        correct = indices.indexOf(correct);
+        return { question: result.question ?? "", options: shuffledOptions, correct, explanation: result.explanation ?? "" };
       }
       case "truefalse": {
         const result = await callJson<{
