@@ -13,6 +13,7 @@ import { ParagraphWithMath } from "@/components/teacher/BlockEditor";
 export interface StudyQA {
   q: string;
   a: string;
+  answers?: string[];
 }
 
 interface GamePickerProps {
