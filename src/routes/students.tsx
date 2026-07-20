@@ -22,6 +22,8 @@ const OPEN_TYPES = new Set(["open", "reflection", "short"]);
 function StudentsPage() {
   const { submissions, lessons, gradeSubmission, deleteSubmission } = useStore();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [studentFilter, setStudentFilter] = useState<string | null>(null);
+
 
   const byStudent = useMemo(() => {
     const map = new Map<string, { name: string; count: number; last: number }>();
