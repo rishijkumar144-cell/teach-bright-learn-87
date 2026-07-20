@@ -38,7 +38,7 @@ function apply(prefs: A11yPrefs) {
   const body = document.body;
   root.classList.toggle("dark", prefs.theme === "dark");
   body?.classList.toggle("dyslexia-font", prefs.dyslexiaFont);
-  body?.classList.toggle("focus-mode", prefs.focusMode);
+  body?.classList.remove("focus-mode");
   body?.classList.toggle("high-contrast", prefs.highContrast);
   root.style.setProperty("--reader-scale", `${prefs.textScale / 100}`);
   root.style.setProperty("--reader-line", `${prefs.lineSpacing}`);
