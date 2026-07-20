@@ -666,16 +666,25 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
   const detonateOne = (i: number) => {
     if (phase !== "play") return;
     if (!wall[i] || bombs === 0) return;
-    const cols = 6;
     const nextWall = [...wall];
-    const targets = [i, i - 1, i + 1, i - cols, i + cols, i - cols - 1, i - cols + 1, i + cols - 1, i + cols + 1];
-    for (const t of targets) if (t >= 0 && t < nextWall.length) nextWall[t] = false;
+    const rows = Math.ceil(wall.length / cols);
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const nr = r + dr;
+        const nc = c + dc;
+        if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
+        nextWall[nr * cols + nc] = false;
+      }
+    }
     setWall(nextWall);
     setBombs((b) => b - 1);
     if (nextWall.every((c) => !c)) {
       setTimeout(() => setPhase("levelClear"), 300);
     }
   };
+
 
   const bricksLeft = wall.filter(Boolean).length;
   const timerColor = secondsLeft <= 10 ? "text-red-600 dark:text-red-400" : "text-foreground";
