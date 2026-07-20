@@ -430,6 +430,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
@@ -440,8 +441,8 @@ function BlockRender({
             className="space-y-2"
           >
             {(d.options as string[]).map((opt, i) => {
-              const isCorrect = submitted && i === Number(d.correct);
-              const isChosenWrong = submitted && value === i && i !== Number(d.correct);
+              const isCorrect = revealed && i === Number(d.correct);
+              const isChosenWrong = revealed && value === i && i !== Number(d.correct);
               return (
                 <label
                   key={i}
@@ -471,13 +472,14 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
           <div className="space-y-2">
             {(d.options as string[]).map((opt, i) => {
-              const isCorrect = submitted && correct.includes(i);
-              const isChosenWrong = submitted && sel.includes(i) && !correct.includes(i);
+              const isCorrect = revealed && correct.includes(i);
+              const isChosenWrong = revealed && sel.includes(i) && !correct.includes(i);
               return (
                 <label
                   key={i}
@@ -515,6 +517,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
@@ -526,8 +529,8 @@ function BlockRender({
           >
             {["true", "false"].map((v) => {
               const val = v === "true";
-              const isCorrect = submitted && val === !!d.correct;
-              const isChosenWrong = submitted && value === val && val !== !!d.correct;
+              const isCorrect = revealed && val === !!d.correct;
+              const isChosenWrong = revealed && value === val && val !== !!d.correct;
               return (
                 <label
                   key={v}
@@ -555,10 +558,11 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
           extra={
-            submitted && d.answer ? (
+            revealed && d.answer ? (
               <div className="mt-2 text-xs text-muted-foreground">
                 Sample answer: <span className="font-medium">{d.answer}</span>
               </div>
@@ -582,6 +586,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
           submitLabel="Submit answer"
@@ -608,6 +613,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
