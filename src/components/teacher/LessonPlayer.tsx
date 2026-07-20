@@ -135,7 +135,7 @@ export function LessonPlayer({
     }
     setMissing(new Set());
     setDone(true);
-    onFinish?.({ studentName: name, answers });
+    onFinish?.({ studentName: name, studentEmail: email, answers });
   };
 
   const submitBlock = (b: Block) => {
