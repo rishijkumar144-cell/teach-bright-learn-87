@@ -27,6 +27,17 @@ function interactiveAttempted(spec: InteractiveSpec, value: unknown): boolean {
       return Array.isArray(value) && (value as unknown[]).length > 0;
     case "coord":
       return Array.isArray(value) && (value as unknown[]).length >= Math.max(1, spec.minShapes || 1);
+    case "table": {
+      const v = (value as Record<string, string> | undefined) ?? {};
+      for (let r = 0; r < spec.rows; r++) {
+        for (let c = 0; c < spec.cols; c++) {
+          const cell = spec.cells[r]?.[c];
+          if (!cell || !cell.blank) continue;
+          if (!(v[`${r},${c}`] ?? "").trim()) return false;
+        }
+      }
+      return true;
+    }
   }
 }
 
