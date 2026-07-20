@@ -26,6 +26,24 @@ function LoginPage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (mode === "forgot") {
+      if (!email) {
+        toast.error("Please enter your email");
+        return;
+      }
+      setLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      setLoading(false);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success("Password reset email sent. Check your inbox.");
+      setMode("signin");
+      return;
+    }
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
@@ -51,6 +69,7 @@ function LoginPage() {
     }
     navigate({ to: "/dashboard" });
   };
+
 
   return (
     <div className="grid min-h-screen bg-background lg:grid-cols-2">
