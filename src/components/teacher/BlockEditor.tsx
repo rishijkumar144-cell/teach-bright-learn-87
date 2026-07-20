@@ -60,6 +60,7 @@ export const GRADED_TYPES = new Set<BlockType>([
 ]);
 
 import { cn } from "@/lib/utils";
+import { AiGenerateButton } from "./AiGenerateButton";
 import { MathPreview } from "./MathPreview";
 import type {
   DrawShape,
@@ -388,6 +389,12 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "paragraph":
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          <div className="mb-2 flex justify-end">
+            <AiGenerateButton
+              kind="paragraph"
+              onGenerated={(r) => onChange({ text: String(r.text ?? "") })}
+            />
+          </div>
           <ParagraphEditor
             value={(d.text as string) ?? ""}
             onChange={(text) => onChange({ text })}
@@ -405,6 +412,14 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
       }[block.type];
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          {block.type === "hint" && (
+            <div className="mb-2 flex justify-end">
+              <AiGenerateButton
+                kind="hint"
+                onGenerated={(r) => onChange({ text: String(r.text ?? "") })}
+              />
+            </div>
+          )}
           <Textarea
             value={d[key] ?? ""}
             onChange={(e) => onChange({ [key]: e.target.value })}
@@ -479,6 +494,19 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "mcq":
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          <div className="mb-2 flex justify-end">
+            <AiGenerateButton
+              kind="mcq"
+              onGenerated={(r) =>
+                onChange({
+                  question: String(r.question ?? ""),
+                  options: Array.isArray(r.options) ? r.options : [],
+                  correct: typeof r.correct === "number" ? r.correct : 0,
+                  explanation: String(r.explanation ?? ""),
+                })
+              }
+            />
+          </div>
           <Textarea
             value={d.question ?? ""}
             onChange={(e) => onChange({ question: e.target.value })}
@@ -594,6 +622,18 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "truefalse":
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          <div className="mb-2 flex justify-end">
+            <AiGenerateButton
+              kind="truefalse"
+              onGenerated={(r) =>
+                onChange({
+                  question: String(r.question ?? ""),
+                  correct: !!r.correct,
+                  explanation: String(r.explanation ?? ""),
+                })
+              }
+            />
+          </div>
           <Textarea
             value={d.question ?? ""}
             onChange={(e) => onChange({ question: e.target.value })}
@@ -618,6 +658,18 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "short":
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          <div className="mb-2 flex justify-end">
+            <AiGenerateButton
+              kind="short"
+              onGenerated={(r) =>
+                onChange({
+                  question: String(r.question ?? ""),
+                  answer: String(r.answer ?? ""),
+                  explanation: String(r.explanation ?? ""),
+                })
+              }
+            />
+          </div>
           <Textarea
             value={d.question ?? ""}
             onChange={(e) => onChange({ question: e.target.value })}
@@ -636,6 +688,17 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "open":
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          <div className="mb-2 flex justify-end">
+            <AiGenerateButton
+              kind="open"
+              onGenerated={(r) =>
+                onChange({
+                  question: String(r.question ?? ""),
+                  explanation: String(r.explanation ?? ""),
+                })
+              }
+            />
+          </div>
           <Textarea
             value={d.question ?? ""}
             onChange={(e) => onChange({ question: e.target.value })}
@@ -669,6 +732,18 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "numeric":
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          <div className="mb-2 flex justify-end">
+            <AiGenerateButton
+              kind="numeric"
+              onGenerated={(r) =>
+                onChange({
+                  question: String(r.question ?? ""),
+                  answer: typeof r.answer === "number" ? r.answer : Number(r.answer) || 0,
+                  explanation: String(r.explanation ?? ""),
+                })
+              }
+            />
+          </div>
           <Textarea
             value={d.question ?? ""}
             onChange={(e) => onChange({ question: e.target.value })}
