@@ -113,6 +113,8 @@ function InteractiveWidget({
       return <CoordWidget spec={spec} value={value} onChange={onChange} disabled={disabled} />;
     case "fill-image":
       return <FillImageWidget spec={spec} value={value} onChange={onChange} disabled={disabled} />;
+    case "table":
+      return <TableWidget spec={spec} value={value} onChange={onChange} disabled={disabled} />;
   }
 }
 
