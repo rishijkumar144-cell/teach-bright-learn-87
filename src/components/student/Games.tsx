@@ -571,7 +571,8 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState<null | "right" | "wrong">(null);
   const [lockUntil, setLockUntil] = useState(0);
-  const [wall, setWall] = useState<boolean[]>(() => Array.from({ length: wallSizeForLevel(1) }, () => true));
+  const [wall, setWall] = useState<boolean[]>(() => buildLevel(1).wall);
+  const [cols, setCols] = useState<number>(() => buildLevel(1).cols);
   const [deadline, setDeadline] = useState(() => Date.now() + LEVEL_SECONDS * 1000);
   const [now, setNow] = useState(() => Date.now());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -596,20 +597,21 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
   }, [phase, secondsLeft]);
 
   const startLevel = (lvl: number) => {
-    const size = wallSizeForLevel(lvl);
+    const built = buildLevel(lvl);
     setLevel(lvl);
-    setWall(Array.from({ length: size }, () => true));
+    setWall(built.wall);
+    setCols(built.cols);
     setBombs(0);
     setStreak(0);
     setInput("");
     setFeedback(null);
     setLockUntil(0);
-    setIdx((i) => i); // keep question rotation
     setDeadline(Date.now() + LEVEL_SECONDS * 1000);
     setNow(Date.now());
     setPhase("play");
     setTimeout(() => inputRef.current?.focus(), 50);
   };
+
 
   const restartLevel = () => startLevel(level);
   const nextLevel = () => {
