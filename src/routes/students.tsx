@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/lib/store";
 import type { Block, Submission } from "@/lib/types";
+import { InteractiveWidget } from "@/components/teacher/InteractiveRunner";
+import type { InteractiveSpec } from "@/lib/charts";
 
 export const Route = createFileRoute("/students")({
   component: StudentsPage,
@@ -230,10 +232,25 @@ function SubmissionDetail({
               const d = b.data as Record<string, unknown>;
               const ans = answers[b.id];
               const label = (d.question ?? d.text ?? b.type) as string;
-              const hasAns = ans !== undefined && ans !== null && ans !== "";
+              const hasAns =
+                ans !== undefined &&
+                ans !== null &&
+                ans !== "" &&
+                !(Array.isArray(ans) && ans.length === 0) &&
+                !(typeof ans === "object" && !Array.isArray(ans) && Object.keys(ans as object).length === 0);
+              if (!hasAns) return null;
               let render: React.ReactNode;
-              if (!hasAns) {
-                render = <span className="italic text-muted-foreground">No answer</span>;
+              if (b.type === "interactive" && d.spec) {
+                render = (
+                  <div className="mt-2 rounded-lg border border-border bg-background p-3">
+                    <InteractiveWidget
+                      spec={d.spec as InteractiveSpec}
+                      value={ans}
+                      onChange={() => {}}
+                      disabled
+                    />
+                  </div>
+                );
               } else if (b.type === "mcq" && typeof ans === "number") {
                 render = ((d.options as string[]) ?? [])[ans] ?? String(ans);
               } else if (b.type === "checkbox" && Array.isArray(ans)) {
@@ -258,12 +275,17 @@ function SubmissionDetail({
                   </div>
                   <div className="font-medium">{label}</div>
                   <div className="mt-1 text-sm text-muted-foreground">
-                    Answer: <span className="text-foreground">{render}</span>
+                    {b.type === "interactive" ? (
+                      render
+                    ) : (
+                      <>Answer: <span className="text-foreground">{render}</span></>
+                    )}
                   </div>
                 </li>
               );
             })}
         </ul>
+
 
       </div>
 
