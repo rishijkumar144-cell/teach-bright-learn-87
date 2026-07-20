@@ -89,7 +89,7 @@ export function InteractiveRunner({
   );
 }
 
-function InteractiveWidget({
+export function InteractiveWidget({
   spec,
   value,
   onChange,
