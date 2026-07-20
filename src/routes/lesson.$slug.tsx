@@ -64,7 +64,23 @@ function StudentLessonView() {
 
   const onFinish = async (result: LessonAttemptResult) => {
     if (!lesson) return;
-    const { answers, studentName } = result;
+    const { answers, studentName, studentEmail } = result;
+    const email = (studentEmail || "").trim().toLowerCase();
+
+    if (lesson.oneResponsePerEmail && email) {
+      const { data: existing, error: dupErr } = await supabase
+        .from("submissions")
+        .select("id")
+        .eq("lesson_id", lesson.id)
+        .eq("student_email", email)
+        .maybeSingle();
+      if (dupErr) console.error(dupErr);
+      if (existing) {
+        toast.error("This email has already submitted a response for this lesson.");
+        return;
+      }
+    }
+
     const autoTypes = new Set(["mcq", "checkbox", "truefalse", "short", "numeric"]);
     let autoScore = 0;
     let autoTotal = 0;
@@ -76,6 +92,7 @@ function StudentLessonView() {
     const { error } = await supabase.from("submissions").insert({
       lesson_id: lesson.id,
       student_name: studentName || "Anonymous",
+      student_email: email,
       answers: answers as never,
       auto_score: autoScore,
       auto_total: autoTotal,
