@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { useStore } from "@/lib/store";
 import type { Block, Submission } from "@/lib/types";
 import { InteractiveWidget } from "@/components/teacher/InteractiveRunner";
-import { GRADED_TYPES } from "@/components/teacher/BlockEditor";
+import { GRADED_TYPES, ParagraphWithMath } from "@/components/teacher/BlockEditor";
 import type { InteractiveSpec } from "@/lib/charts";
 
 export const Route = createFileRoute("/students")({
