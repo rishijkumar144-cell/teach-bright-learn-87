@@ -22,6 +22,8 @@ const OPEN_TYPES = new Set(["open", "reflection", "short"]);
 function StudentsPage() {
   const { submissions, lessons, gradeSubmission, deleteSubmission } = useStore();
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [studentFilter, setStudentFilter] = useState<string | null>(null);
+
 
   const byStudent = useMemo(() => {
     const map = new Map<string, { name: string; count: number; last: number }>();
@@ -58,24 +60,33 @@ function StudentsPage() {
               </div>
             ) : (
               <ul className="mt-4 space-y-2">
-                {byStudent.map((s) => (
-                  <li
-                    key={s.name}
-                    className="flex items-center gap-3 rounded-xl bg-accent/40 p-3"
-                  >
-                    <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary font-semibold">
-                      {s.name[0]?.toUpperCase() || "?"}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{s.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {s.count} submission{s.count === 1 ? "" : "s"} ·{" "}
-                        {formatDistanceToNow(s.last, { addSuffix: true })}
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                {byStudent.map((s) => {
+                  const active = studentFilter === s.name;
+                  return (
+                    <li key={s.name}>
+                      <button
+                        type="button"
+                        onClick={() => setStudentFilter(active ? null : s.name)}
+                        className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition ${
+                          active ? "bg-primary/10 ring-1 ring-primary/40" : "bg-accent/40 hover:bg-accent/60"
+                        }`}
+                      >
+                        <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary font-semibold">
+                          {s.name[0]?.toUpperCase() || "?"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium">{s.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {s.count} submission{s.count === 1 ? "" : "s"} ·{" "}
+                            {formatDistanceToNow(s.last, { addSuffix: true })}
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
+
             )}
           </CardContent>
         </Card>
@@ -95,7 +106,10 @@ function StudentsPage() {
               </div>
             ) : (
               <ul className="mt-4 space-y-3">
-                {submissions.map((s) => {
+                {submissions
+                  .filter((s) => !studentFilter || s.studentName === studentFilter)
+                  .map((s) => {
+
                   const lesson = lessons.find((l) => l.id === s.lessonId);
                   const open = expanded === s.id;
                   return (
@@ -207,13 +221,20 @@ function SubmissionDetail({
         <h3 className="text-sm font-semibold">All answers</h3>
         <ul className="mt-2 space-y-2 text-sm">
           {blocks
-            .filter((b) => answers[b.id] !== undefined)
+            .filter((b) =>
+              ["mcq", "checkbox", "short", "numeric", "truefalse", "open", "reflection", "interactive"].includes(
+                b.type,
+              ),
+            )
             .map((b) => {
               const d = b.data as Record<string, unknown>;
               const ans = answers[b.id];
               const label = (d.question ?? d.text ?? b.type) as string;
-              let render: string;
-              if (b.type === "mcq" && typeof ans === "number") {
+              const hasAns = ans !== undefined && ans !== null && ans !== "";
+              let render: React.ReactNode;
+              if (!hasAns) {
+                render = <span className="italic text-muted-foreground">No answer</span>;
+              } else if (b.type === "mcq" && typeof ans === "number") {
                 render = ((d.options as string[]) ?? [])[ans] ?? String(ans);
               } else if (b.type === "checkbox" && Array.isArray(ans)) {
                 render = (ans as number[])
@@ -221,6 +242,12 @@ function SubmissionDetail({
                   .join(", ");
               } else if (b.type === "truefalse") {
                 render = ans ? "True" : "False";
+              } else if (typeof ans === "object") {
+                render = (
+                  <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-2 text-xs">
+                    {JSON.stringify(ans, null, 2)}
+                  </pre>
+                );
               } else {
                 render = String(ans);
               }
@@ -237,6 +264,7 @@ function SubmissionDetail({
               );
             })}
         </ul>
+
       </div>
 
       {openBlocks.length > 0 && (
