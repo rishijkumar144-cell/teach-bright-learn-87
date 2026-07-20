@@ -44,7 +44,7 @@ interface StoreContext {
     patch: {
       manualScore?: number | null;
       manualTotal?: number | null;
-      feedback?: Record<string, { score?: number; comment?: string }>;
+      feedback?: Record<string, { score?: number; comment?: string; excused?: boolean }>;
     },
   ) => Promise<void>;
   deleteSubmission: (id: string) => Promise<void>;
