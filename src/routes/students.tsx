@@ -221,13 +221,20 @@ function SubmissionDetail({
         <h3 className="text-sm font-semibold">All answers</h3>
         <ul className="mt-2 space-y-2 text-sm">
           {blocks
-            .filter((b) => answers[b.id] !== undefined)
+            .filter((b) =>
+              ["mcq", "checkbox", "short", "numeric", "truefalse", "open", "reflection", "interactive"].includes(
+                b.type,
+              ),
+            )
             .map((b) => {
               const d = b.data as Record<string, unknown>;
               const ans = answers[b.id];
               const label = (d.question ?? d.text ?? b.type) as string;
-              let render: string;
-              if (b.type === "mcq" && typeof ans === "number") {
+              const hasAns = ans !== undefined && ans !== null && ans !== "";
+              let render: React.ReactNode;
+              if (!hasAns) {
+                render = <span className="italic text-muted-foreground">No answer</span>;
+              } else if (b.type === "mcq" && typeof ans === "number") {
                 render = ((d.options as string[]) ?? [])[ans] ?? String(ans);
               } else if (b.type === "checkbox" && Array.isArray(ans)) {
                 render = (ans as number[])
@@ -235,6 +242,12 @@ function SubmissionDetail({
                   .join(", ");
               } else if (b.type === "truefalse") {
                 render = ans ? "True" : "False";
+              } else if (typeof ans === "object") {
+                render = (
+                  <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-2 text-xs">
+                    {JSON.stringify(ans, null, 2)}
+                  </pre>
+                );
               } else {
                 render = String(ans);
               }
@@ -251,6 +264,7 @@ function SubmissionDetail({
               );
             })}
         </ul>
+
       </div>
 
       {openBlocks.length > 0 && (
