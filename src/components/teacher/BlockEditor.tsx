@@ -48,6 +48,17 @@ import {
 } from "@/components/ui/popover";
 import { newBlockId } from "@/lib/store";
 import type { Block, BlockType } from "@/lib/types";
+
+export const GRADED_TYPES = new Set<BlockType>([
+  "mcq",
+  "checkbox",
+  "truefalse",
+  "short",
+  "numeric",
+  "open",
+  "interactive",
+]);
+
 import { cn } from "@/lib/utils";
 import { MathPreview } from "./MathPreview";
 import type {
@@ -260,7 +271,34 @@ export function BlockList({
                       <span className="truncate">· {blockSummary(b)}</span>
                     </div>
                   ) : (
-                    <BlockEditor block={b} onChange={(d) => update(b.id, d)} />
+                    <>
+                      <BlockEditor block={b} onChange={(d) => update(b.id, d)} />
+                      {GRADED_TYPES.has(b.type) && (
+                        <div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-border bg-accent/30 px-3 py-2">
+                          <Label className="text-xs font-medium">Points</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={20}
+                            step={1}
+                            value={
+                              (b.data as Record<string, unknown>).points === undefined
+                                ? 1
+                                : Number((b.data as Record<string, unknown>).points)
+                            }
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              const n = raw === "" ? 0 : Math.max(0, Math.min(20, Math.round(Number(raw))));
+                              update(b.id, { points: n });
+                            }}
+                            className="h-8 w-20"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            Worth 0–20 points. Set to 0 for ungraded practice.
+                          </span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
