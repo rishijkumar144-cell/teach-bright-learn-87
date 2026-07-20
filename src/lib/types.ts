@@ -42,6 +42,7 @@ export interface Lesson {
   blocks: Block[];
   status: LessonStatus;
   requireStudentName: boolean;
+  oneResponsePerEmail: boolean;
   createdAt: number;
   updatedAt: number;
   publishedAt: number | null;
