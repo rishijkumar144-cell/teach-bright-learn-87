@@ -10,16 +10,23 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useStore } from "@/lib/store";
 import type { Block, Submission } from "@/lib/types";
 import { InteractiveWidget } from "@/components/teacher/InteractiveRunner";
+import { GRADED_TYPES } from "@/components/teacher/BlockEditor";
 import type { InteractiveSpec } from "@/lib/charts";
 
 export const Route = createFileRoute("/students")({
   component: StudentsPage,
 });
 
-const OPEN_TYPES = new Set(["open", "reflection", "short"]);
+function blockPoints(b: Block): number {
+  const p = (b.data as Record<string, unknown>).points;
+  if (typeof p === "number" && Number.isFinite(p)) return Math.max(0, Math.min(20, p));
+  return 1;
+}
+
 
 function StudentsPage() {
   const { submissions, lessons, gradeSubmission, deleteSubmission } = useStore();
