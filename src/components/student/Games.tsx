@@ -161,9 +161,13 @@ function FlashcardGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
               <p className="mt-2 text-xs text-muted-foreground">Tap card to reveal answer</p>
             </div>
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-3xl border-2 border-emerald-500/40 bg-gradient-to-br from-emerald-500/15 to-teal-500/10 p-8 text-center [backface-visibility:hidden] [transform:rotateY(180deg)]">
-              <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Answer</span>
-              <div className="text-2xl font-bold leading-tight text-foreground">
-                <ParagraphWithMath text={q.a} />
+              <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                {(q.answers?.length ?? 0) > 1 ? "Accepted answers" : "Answer"}
+              </span>
+              <div className="text-2xl font-bold leading-tight text-foreground space-y-1">
+                {(q.answers && q.answers.length > 1 ? q.answers : [q.a]).map((ans, i) => (
+                  <div key={i}><ParagraphWithMath text={ans} /></div>
+                ))}
               </div>
             </div>
           </motion.div>
