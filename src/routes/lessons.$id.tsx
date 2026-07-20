@@ -297,7 +297,7 @@ function LessonEditor() {
 
       {/* Publish modal */}
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg p-8 sm:p-10">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <motion.span
@@ -311,7 +311,7 @@ function LessonEditor() {
               Lesson published
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-6 pt-2">
             <p className="text-sm text-muted-foreground">
               Share this link with your students. No login required — they can start instantly.
             </p>
