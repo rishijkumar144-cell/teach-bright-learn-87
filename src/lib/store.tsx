@@ -263,7 +263,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       patch: {
         manualScore?: number | null;
         manualTotal?: number | null;
-        feedback?: Record<string, { score?: number; comment?: string }>;
+        feedback?: Record<string, { score?: number; comment?: string; excused?: boolean }>;
       },
     ) => {
       const dbPatch: Record<string, unknown> = { graded_at: new Date().toISOString() };
