@@ -166,16 +166,6 @@ export function AccessibilityToolbar() {
                 />
               </Row>
               <Row
-                icon={Focus}
-                label="Focus mode"
-                description="Dims decorations and one-thing-at-a-time layout."
-              >
-                <Switch
-                  checked={prefs.focusMode}
-                  onCheckedChange={(v) => patch({ focusMode: v })}
-                />
-              </Row>
-              <Row
                 icon={ALargeSmall}
                 label="High contrast"
                 description="Stronger colors for better readability."
