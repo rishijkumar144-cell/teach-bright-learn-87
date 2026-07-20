@@ -79,6 +79,7 @@ export function LessonPlayer({
   const [submitted, setSubmitted] = useState<Record<string, boolean>>({});
   const [nameGate, setNameGate] = useState(lesson.requireStudentName);
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
   const [missing, setMissing] = useState<Set<string>>(new Set());
   const [pageIdx, setPageIdx] = useState(0);
