@@ -73,16 +73,25 @@ export function GamesHub({ seedQuestions }: GamePickerProps) {
               }}
             />
           </div>
+          <div className="space-y-1.5 sm:w-32">
+            <Label htmlFor="game-count"># Questions</Label>
+            <Input
+              id="game-count"
+              type="number"
+              min={5}
+              max={75}
+              value={count}
+              onChange={(e) => setCount(Number(e.target.value))}
+            />
+          </div>
           <Button onClick={loadQuestions} disabled={loading} className="sm:w-auto">
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
             Generate questions
           </Button>
         </div>
-        {questions.length > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {questions.length} questions ready. Pick a game to play!
-          </p>
-        )}
+        <p className="mt-3 text-xs text-muted-foreground">
+          Choose between 5 and 75 questions. {questions.length > 0 && `${questions.length} ready — pick a game!`}
+        </p>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
