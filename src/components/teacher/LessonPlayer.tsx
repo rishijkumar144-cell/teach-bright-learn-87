@@ -22,6 +22,7 @@ const SUBMITTABLE_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "num
 
 export interface LessonAttemptResult {
   studentName: string;
+  studentEmail: string;
   answers: Record<string, unknown>;
 }
 
