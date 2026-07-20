@@ -5,7 +5,6 @@ import {
   Moon,
   Sun,
   Type,
-  Focus,
   ALargeSmall,
   Baseline,
   RotateCcw,
