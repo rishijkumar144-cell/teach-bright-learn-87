@@ -263,8 +263,21 @@ function LineWidget({
   disabled: boolean;
 }) {
   const pts = (value as { x: number; y: number }[] | undefined) ?? [];
-  const shapes: DrawShape[] = pts.map((p) => ({ type: "point", x: p.x, y: p.y }));
+  const pointShapes: DrawShape[] = pts.map((p) => ({ type: "point", x: p.x, y: p.y }));
   const targets: DrawShape[] = spec.targets.map((t) => ({ type: "point", x: t.x, y: t.y, label: "•" }));
+  // Auto-connect: once the student has plotted at least the required number of
+  // points, draw the connecting polyline (sorted by x) so the "line" is visible.
+  const connectors: DrawShape[] = [];
+  if (pts.length >= spec.targets.length && pts.length >= 2) {
+    const sorted = [...pts].sort((a, b) => a.x - b.x);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      connectors.push({
+        type: "line",
+        x1: sorted[i].x, y1: sorted[i].y,
+        x2: sorted[i + 1].x, y2: sorted[i + 1].y,
+      });
+    }
+  }
   return (
     <div>
       <CoordinateGrid
@@ -272,11 +285,11 @@ function LineWidget({
         xMax={spec.xMax}
         yMin={spec.yMin}
         yMax={spec.yMax}
-        shapes={disabled ? [...targets, ...shapes] : shapes}
+        shapes={disabled ? [...targets, ...connectors, ...pointShapes] : [...connectors, ...pointShapes]}
         onClick={disabled ? undefined : (x, y) => onChange([...pts, { x, y }])}
       />
       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-        <span>Plotted: {pts.length} / needed {spec.targets.length}</span>
+        <span>Plotted: {pts.length} / needed {spec.targets.length}{pts.length >= spec.targets.length && pts.length >= 2 ? " — line drawn" : ""}</span>
         <Button size="sm" variant="ghost" disabled={disabled || pts.length === 0} onClick={() => onChange([])}>
           <Trash2 className="h-3 w-3" /> Clear
         </Button>
