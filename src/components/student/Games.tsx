@@ -308,14 +308,258 @@ function MemoryMatchGame({ questions, onExit }: { questions: StudyQA[]; onExit: 
 // ============================================================
 // Bomb Blast
 // ============================================================
-const TOTAL_LEVELS = 20;
 const LEVEL_SECONDS = 60;
 const WRONG_LOCK_MS = 5000;
 
-function wallSizeForLevel(level: number): number {
-  // Level 1: 8 bricks, Level 20: 27 bricks. 6-col grid.
-  return Math.min(30, 6 + level);
+const LEVELS: { name: string; pattern: string[] }[] = [
+  { name: "Block", pattern: [
+    "########",
+    "########",
+    "########",
+    "########",
+    "########",
+  ]},
+  { name: "Pyramid", pattern: [
+    "....#....",
+    "...###...",
+    "..#####..",
+    ".#######.",
+    "#########",
+    "#########",
+  ]},
+  { name: "Diamond", pattern: [
+    "....#....",
+    "...###...",
+    "..#####..",
+    ".#######.",
+    "#########",
+    ".#######.",
+    "..#####..",
+    "...###...",
+    "....#....",
+  ]},
+  { name: "Cross", pattern: [
+    "...####...",
+    "...####...",
+    "...####...",
+    "##########",
+    "##########",
+    "##########",
+    "...####...",
+    "...####...",
+    "...####...",
+  ]},
+  { name: "Heart", pattern: [
+    ".##...##.",
+    "####.####",
+    "#########",
+    "#########",
+    ".#######.",
+    "..#####..",
+    "...###...",
+    "....#....",
+  ]},
+  { name: "Arrow", pattern: [
+    "....#....",
+    "...###...",
+    "..#####..",
+    ".#######.",
+    "#########",
+    "...###...",
+    "...###...",
+    "...###...",
+    "...###...",
+  ]},
+  { name: "Hourglass", pattern: [
+    "###########",
+    ".#########.",
+    "..#######..",
+    "...#####...",
+    "....###....",
+    "....###....",
+    "...#####...",
+    "..#######..",
+    ".#########.",
+    "###########",
+  ]},
+  { name: "Star", pattern: [
+    ".....#.....",
+    ".....#.....",
+    "....###....",
+    "###########",
+    ".#########.",
+    "..#######..",
+    "...#####...",
+    "..##.#.##..",
+    ".##...#.##.",
+  ]},
+  { name: "Skull", pattern: [
+    "..#######..",
+    ".#########.",
+    "###########",
+    "##.#####.##",
+    "##.#####.##",
+    "###########",
+    "###.###.###",
+    ".#########.",
+    "..#.#.#.#..",
+    "..#.#.#.#..",
+  ]},
+  { name: "Castle", pattern: [
+    "#.#.#.#.#.#",
+    "###########",
+    "###########",
+    "##.#####.##",
+    "##.#####.##",
+    "###########",
+    "###########",
+    "####.#.####",
+    "###########",
+    "###########",
+  ]},
+  { name: "Letter A", pattern: [
+    "....###....",
+    "...#####...",
+    "..##...##..",
+    ".##.....##.",
+    "##.......##",
+    "###########",
+    "###########",
+    "##.......##",
+    "##.......##",
+    "##.......##",
+  ]},
+  { name: "Rocket", pattern: [
+    "....#....",
+    "...###...",
+    "..#####..",
+    "..#####..",
+    "..#####..",
+    ".#######.",
+    "#########",
+    "##.###.##",
+    "#.......#",
+  ]},
+  { name: "Twins", pattern: [
+    "..#.....#..",
+    ".###...###.",
+    "#####.#####",
+    ".###...###.",
+    "..#.....#..",
+    "..#.....#..",
+    ".###...###.",
+    "#####.#####",
+    ".###...###.",
+    "..#.....#..",
+  ]},
+  { name: "Crown", pattern: [
+    "#...#...#...#",
+    "##.###.###.##",
+    "#############",
+    "#############",
+    "#############",
+    "#.##.###.##.#",
+    "#############",
+  ]},
+  { name: "Spiral", pattern: [
+    "#############",
+    "#############",
+    "##.........##",
+    "##.#######.##",
+    "##.#.....#.##",
+    "##.#.###.#.##",
+    "##.#.#...#.##",
+    "##.#.#####.##",
+    "##.#.......##",
+    "##.##########",
+    "##...........",
+    "#############",
+  ]},
+  { name: "Grand Heart", pattern: [
+    ".####...####.",
+    "#############",
+    "#############",
+    "#############",
+    "#############",
+    ".###########.",
+    "..#########..",
+    "...#######...",
+    "....#####....",
+    ".....###.....",
+    "......#......",
+  ]},
+  { name: "Dragon", pattern: [
+    "##.........##",
+    "###.......###",
+    "####.....####",
+    "#############",
+    "##.#######.##",
+    "##.#.###.#.##",
+    "##.#######.##",
+    "#############",
+    "####.....####",
+    "###.......###",
+    "##.........##",
+  ]},
+  { name: "Mega Star", pattern: [
+    "......#......",
+    ".....###.....",
+    ".....###.....",
+    "#############",
+    ".###########.",
+    "..#########..",
+    "...#######...",
+    "..#########..",
+    ".##.#####.##.",
+    "##...###...##",
+    "#.....#.....#",
+  ]},
+  { name: "Fortress", pattern: [
+    "#.#.#.#.#.#.#.#",
+    "###############",
+    "###############",
+    "##.#########.##",
+    "##.#.......#.##",
+    "##.#.#####.#.##",
+    "##.#.#...#.#.##",
+    "##.#.#.#.#.#.##",
+    "##.#.#####.#.##",
+    "##.#.......#.##",
+    "##.#########.##",
+    "###############",
+    "###############",
+  ]},
+  { name: "Boss", pattern: [
+    "###.#.#.#.#.###",
+    "###############",
+    "###############",
+    "##.####.####.##",
+    "##.####.####.##",
+    "###############",
+    "####.#####.####",
+    "###############",
+    "##.###.#.###.##",
+    "##.###.#.###.##",
+    "###############",
+    "###############",
+    "###.#.#.#.#.###",
+  ]},
+];
+
+const TOTAL_LEVELS = LEVELS.length;
+
+function buildLevel(lvl: number): { wall: boolean[]; cols: number } {
+  const spec = LEVELS[Math.min(lvl, LEVELS.length) - 1];
+  const cols = spec.pattern[0].length;
+  const wall: boolean[] = [];
+  for (const row of spec.pattern) {
+    for (let x = 0; x < cols; x++) {
+      wall.push(row[x] === "#");
+    }
+  }
+  return { wall, cols };
 }
+
 
 function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: () => void }) {
   const [level, setLevel] = useState(1);
@@ -327,7 +571,8 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
   const [input, setInput] = useState("");
   const [feedback, setFeedback] = useState<null | "right" | "wrong">(null);
   const [lockUntil, setLockUntil] = useState(0);
-  const [wall, setWall] = useState<boolean[]>(() => Array.from({ length: wallSizeForLevel(1) }, () => true));
+  const [wall, setWall] = useState<boolean[]>(() => buildLevel(1).wall);
+  const [cols, setCols] = useState<number>(() => buildLevel(1).cols);
   const [deadline, setDeadline] = useState(() => Date.now() + LEVEL_SECONDS * 1000);
   const [now, setNow] = useState(() => Date.now());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -352,20 +597,21 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
   }, [phase, secondsLeft]);
 
   const startLevel = (lvl: number) => {
-    const size = wallSizeForLevel(lvl);
+    const built = buildLevel(lvl);
     setLevel(lvl);
-    setWall(Array.from({ length: size }, () => true));
+    setWall(built.wall);
+    setCols(built.cols);
     setBombs(0);
     setStreak(0);
     setInput("");
     setFeedback(null);
     setLockUntil(0);
-    setIdx((i) => i); // keep question rotation
     setDeadline(Date.now() + LEVEL_SECONDS * 1000);
     setNow(Date.now());
     setPhase("play");
     setTimeout(() => inputRef.current?.focus(), 50);
   };
+
 
   const restartLevel = () => startLevel(level);
   const nextLevel = () => {
@@ -460,7 +706,7 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
           <Bomb className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
           <h3 className="mt-3 text-2xl font-bold">Level {level} clear!</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {level >= TOTAL_LEVELS ? "Final wall down!" : `Next up: level ${level + 1} (${wallSizeForLevel(level + 1)} bricks).`}
+            {level >= TOTAL_LEVELS ? "Final wall down!" : `Next up: level ${level + 1} — ${LEVELS[level].name}.`}
           </p>
           <Button onClick={nextLevel} className="mt-4">
             {level >= TOTAL_LEVELS ? "Finish" : "Next level"} <ChevronRight className="ml-1 h-4 w-4" />
@@ -528,23 +774,26 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
           {/* Wall */}
           <div className="space-y-2">
             <div className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Level {level} wall · {bricksLeft} bricks
+              Level {level} · {LEVELS[level - 1].name} · {bricksLeft} bricks
             </div>
-            <div className="grid grid-cols-6 gap-1 rounded-xl border-2 border-border bg-muted/30 p-2">
+            <div
+              className="grid gap-[2px] rounded-xl border-2 border-border bg-muted/30 p-2 w-full max-w-[420px] mx-auto"
+              style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+            >
               {wall.map((alive, i) => (
                 <motion.button
                   key={i}
                   disabled={!alive || bombs === 0}
                   onClick={() => detonateOne(i)}
                   animate={{ scale: alive ? 1 : 0, opacity: alive ? 1 : 0 }}
-                  transition={{ duration: 0.3 }}
+                  transition={{ duration: 0.25 }}
                   className={cn(
-                    "aspect-square rounded-md border transition",
+                    "aspect-square rounded-[2px] transition",
                     alive
                       ? bombs > 0
-                        ? "border-orange-500/40 bg-gradient-to-br from-orange-400 to-red-500 shadow-inner hover:scale-105 cursor-pointer"
-                        : "border-border bg-gradient-to-br from-orange-300 to-red-400 opacity-70"
-                      : "border-transparent",
+                        ? "bg-gradient-to-br from-orange-400 to-red-500 shadow-inner hover:scale-110 cursor-pointer ring-1 ring-orange-600/30"
+                        : "bg-gradient-to-br from-orange-300 to-red-400 opacity-70"
+                      : "bg-transparent",
                   )}
                   aria-label={`Brick ${i + 1}`}
                 />
@@ -554,6 +803,7 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
               {bombs === 0 ? "Answer questions to earn bombs" : `Click a brick to blast (${bombs} bomb${bombs === 1 ? "" : "s"})`}
             </p>
           </div>
+
         </div>
       )}
 
