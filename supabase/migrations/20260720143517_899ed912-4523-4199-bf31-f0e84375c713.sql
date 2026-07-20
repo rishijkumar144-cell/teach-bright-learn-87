@@ -1,0 +1,2 @@
+ALTER TABLE public.submissions ADD COLUMN IF NOT EXISTS student_email text NOT NULL DEFAULT '';
+ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS one_response_per_email boolean NOT NULL DEFAULT false;
