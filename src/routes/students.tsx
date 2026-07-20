@@ -106,7 +106,10 @@ function StudentsPage() {
               </div>
             ) : (
               <ul className="mt-4 space-y-3">
-                {submissions.map((s) => {
+                {submissions
+                  .filter((s) => !studentFilter || s.studentName === studentFilter)
+                  .map((s) => {
+
                   const lesson = lessons.find((l) => l.id === s.lessonId);
                   const open = expanded === s.id;
                   return (
