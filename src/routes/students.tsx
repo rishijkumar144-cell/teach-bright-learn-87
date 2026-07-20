@@ -35,15 +35,21 @@ function StudentsPage() {
 
 
   const byStudent = useMemo(() => {
-    const map = new Map<string, { name: string; count: number; last: number }>();
+    const map = new Map<string, { name: string; email: string; count: number; last: number }>();
     for (const s of submissions) {
-      const cur = map.get(s.studentName) || { name: s.studentName, count: 0, last: 0 };
+      const cur = map.get(s.studentName) || { name: s.studentName, email: "", count: 0, last: 0 };
       cur.count += 1;
       cur.last = Math.max(cur.last, s.submittedAt);
+      if (!cur.email && s.studentEmail) cur.email = s.studentEmail;
       map.set(s.studentName, cur);
     }
     return Array.from(map.values()).sort((a, b) => b.last - a.last);
   }, [submissions]);
+
+  const selectedStudentEmail = useMemo(() => {
+    if (!studentFilter) return "";
+    return byStudent.find((s) => s.name === studentFilter)?.email ?? "";
+  }, [studentFilter, byStudent]);
 
   return (
     <TeacherLayout>
