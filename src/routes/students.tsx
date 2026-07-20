@@ -60,24 +60,33 @@ function StudentsPage() {
               </div>
             ) : (
               <ul className="mt-4 space-y-2">
-                {byStudent.map((s) => (
-                  <li
-                    key={s.name}
-                    className="flex items-center gap-3 rounded-xl bg-accent/40 p-3"
-                  >
-                    <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary font-semibold">
-                      {s.name[0]?.toUpperCase() || "?"}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium">{s.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {s.count} submission{s.count === 1 ? "" : "s"} ·{" "}
-                        {formatDistanceToNow(s.last, { addSuffix: true })}
-                      </div>
-                    </div>
-                  </li>
-                ))}
+                {byStudent.map((s) => {
+                  const active = studentFilter === s.name;
+                  return (
+                    <li key={s.name}>
+                      <button
+                        type="button"
+                        onClick={() => setStudentFilter(active ? null : s.name)}
+                        className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition ${
+                          active ? "bg-primary/10 ring-1 ring-primary/40" : "bg-accent/40 hover:bg-accent/60"
+                        }`}
+                      >
+                        <div className="grid h-9 w-9 place-items-center rounded-full bg-primary/10 text-primary font-semibold">
+                          {s.name[0]?.toUpperCase() || "?"}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium">{s.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {s.count} submission{s.count === 1 ? "" : "s"} ·{" "}
+                            {formatDistanceToNow(s.last, { addSuffix: true })}
+                          </div>
+                        </div>
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
+
             )}
           </CardContent>
         </Card>
