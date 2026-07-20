@@ -774,23 +774,26 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
           {/* Wall */}
           <div className="space-y-2">
             <div className="text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Level {level} wall · {bricksLeft} bricks
+              Level {level} · {LEVELS[level - 1].name} · {bricksLeft} bricks
             </div>
-            <div className="grid grid-cols-6 gap-1 rounded-xl border-2 border-border bg-muted/30 p-2">
+            <div
+              className="grid gap-[2px] rounded-xl border-2 border-border bg-muted/30 p-2 w-full max-w-[420px] mx-auto"
+              style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+            >
               {wall.map((alive, i) => (
                 <motion.button
                   key={i}
                   disabled={!alive || bombs === 0}
                   onClick={() => detonateOne(i)}
                   animate={{ scale: alive ? 1 : 0, opacity: alive ? 1 : 0 }}
-                  transition={{ duration: 0.3 }}
+                  transition={{ duration: 0.25 }}
                   className={cn(
-                    "aspect-square rounded-md border transition",
+                    "aspect-square rounded-[2px] transition",
                     alive
                       ? bombs > 0
-                        ? "border-orange-500/40 bg-gradient-to-br from-orange-400 to-red-500 shadow-inner hover:scale-105 cursor-pointer"
-                        : "border-border bg-gradient-to-br from-orange-300 to-red-400 opacity-70"
-                      : "border-transparent",
+                        ? "bg-gradient-to-br from-orange-400 to-red-500 shadow-inner hover:scale-110 cursor-pointer ring-1 ring-orange-600/30"
+                        : "bg-gradient-to-br from-orange-300 to-red-400 opacity-70"
+                      : "bg-transparent",
                   )}
                   aria-label={`Brick ${i + 1}`}
                 />
@@ -800,6 +803,7 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
               {bombs === 0 ? "Answer questions to earn bombs" : `Click a brick to blast (${bombs} bomb${bombs === 1 ? "" : "s"})`}
             </p>
           </div>
+
         </div>
       )}
 
