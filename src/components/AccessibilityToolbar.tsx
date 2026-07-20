@@ -102,44 +102,49 @@ export function AccessibilityToolbar() {
   const patch = (p: Partial<A11yPrefs>) => setPrefs((cur) => ({ ...cur, ...p }));
 
   return (
-    <div className="fixed right-4 top-4 z-50 flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="icon"
-        aria-label="Toggle theme"
-        onClick={() => patch({ theme: prefs.theme === "dark" ? "light" : "dark" })}
-        className="rounded-full shadow-soft bg-background/80 backdrop-blur"
-      >
-        <AnimatePresence mode="wait" initial={false}>
-          {prefs.theme === "dark" ? (
-            <motion.span key="s" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
-              <Sun className="h-4 w-4" />
-            </motion.span>
-          ) : (
-            <motion.span key="m" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
-              <Moon className="h-4 w-4" />
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </Button>
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => setOpen((o) => !o)}
-        aria-label="Accessibility options"
-        className="rounded-full shadow-soft bg-background/80 backdrop-blur"
-      >
-        <Accessibility className="h-4 w-4" />
-      </Button>
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
+      <div className="flex items-center gap-1 rounded-full border border-border bg-background/90 p-1 shadow-lift backdrop-blur">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Toggle theme"
+          onClick={() => patch({ theme: prefs.theme === "dark" ? "light" : "dark" })}
+          className="h-9 w-9 rounded-full"
+        >
+          <AnimatePresence mode="wait" initial={false}>
+            {prefs.theme === "dark" ? (
+              <motion.span key="s" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
+                <Sun className="h-4 w-4" />
+              </motion.span>
+            ) : (
+              <motion.span key="m" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
+                <Moon className="h-4 w-4" />
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </Button>
+        <div className="h-5 w-px bg-border" />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setOpen((o) => !o)}
+          aria-label="Accessibility options"
+          aria-expanded={open}
+          className="h-9 w-9 rounded-full"
+        >
+          <Accessibility className="h-4 w-4" />
+        </Button>
+      </div>
 
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
+            initial={{ opacity: 0, y: 8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            className="absolute right-0 top-12 w-80 rounded-2xl border border-border bg-card p-4 shadow-lift"
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            className="w-80 rounded-2xl border border-border bg-card p-4 shadow-lift"
           >
+
             <div className="flex items-center justify-between">
               <div className="text-sm font-semibold">Reading tools</div>
               <button
