@@ -27,6 +27,17 @@ function interactiveAttempted(spec: InteractiveSpec, value: unknown): boolean {
       return Array.isArray(value) && (value as unknown[]).length > 0;
     case "coord":
       return Array.isArray(value) && (value as unknown[]).length >= Math.max(1, spec.minShapes || 1);
+    case "table": {
+      const v = (value as Record<string, string> | undefined) ?? {};
+      for (let r = 0; r < spec.rows; r++) {
+        for (let c = 0; c < spec.cols; c++) {
+          const cell = spec.cells[r]?.[c];
+          if (!cell || !cell.blank) continue;
+          if (!(v[`${r},${c}`] ?? "").trim()) return false;
+        }
+      }
+      return true;
+    }
   }
 }
 
@@ -102,6 +113,8 @@ function InteractiveWidget({
       return <CoordWidget spec={spec} value={value} onChange={onChange} disabled={disabled} />;
     case "fill-image":
       return <FillImageWidget spec={spec} value={value} onChange={onChange} disabled={disabled} />;
+    case "table":
+      return <TableWidget spec={spec} value={value} onChange={onChange} disabled={disabled} />;
   }
 }
 
@@ -250,8 +263,21 @@ function LineWidget({
   disabled: boolean;
 }) {
   const pts = (value as { x: number; y: number }[] | undefined) ?? [];
-  const shapes: DrawShape[] = pts.map((p) => ({ type: "point", x: p.x, y: p.y }));
+  const pointShapes: DrawShape[] = pts.map((p) => ({ type: "point", x: p.x, y: p.y }));
   const targets: DrawShape[] = spec.targets.map((t) => ({ type: "point", x: t.x, y: t.y, label: "•" }));
+  // Auto-connect: once the student has plotted at least the required number of
+  // points, draw the connecting polyline (sorted by x) so the "line" is visible.
+  const connectors: DrawShape[] = [];
+  if (pts.length >= spec.targets.length && pts.length >= 2) {
+    const sorted = [...pts].sort((a, b) => a.x - b.x);
+    for (let i = 0; i < sorted.length - 1; i++) {
+      connectors.push({
+        type: "line",
+        x1: sorted[i].x, y1: sorted[i].y,
+        x2: sorted[i + 1].x, y2: sorted[i + 1].y,
+      });
+    }
+  }
   return (
     <div>
       <CoordinateGrid
@@ -259,11 +285,11 @@ function LineWidget({
         xMax={spec.xMax}
         yMin={spec.yMin}
         yMax={spec.yMax}
-        shapes={disabled ? [...targets, ...shapes] : shapes}
+        shapes={disabled ? [...targets, ...connectors, ...pointShapes] : [...connectors, ...pointShapes]}
         onClick={disabled ? undefined : (x, y) => onChange([...pts, { x, y }])}
       />
       <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
-        <span>Plotted: {pts.length} / needed {spec.targets.length}</span>
+        <span>Plotted: {pts.length} / needed {spec.targets.length}{pts.length >= spec.targets.length && pts.length >= 2 ? " — line drawn" : ""}</span>
         <Button size="sm" variant="ghost" disabled={disabled || pts.length === 0} onClick={() => onChange([])}>
           <Trash2 className="h-3 w-3" /> Clear
         </Button>
@@ -365,6 +391,50 @@ function CoordWidget({
     onChange([...shapes, shape]);
   };
 
+  const toolHelp: Record<ToolKind, { steps: string[]; tip?: string }> = {
+    point: {
+      steps: ["Click anywhere on the grid to drop a point."],
+    },
+    line: {
+      steps: [
+        "Click any point the line passes through.",
+        "Click a second point on the line — the line will extend through both.",
+      ],
+    },
+    parabola: {
+      steps: [
+        "Click the vertex (the tip of the parabola).",
+        "Click any other point on the curve — the parabola opens up or down through it.",
+      ],
+      tip: "A parabola y = a(x − h)² + k is fully defined by its vertex (h, k) and one more point.",
+    },
+    circle: {
+      steps: [
+        "Click the center of the circle.",
+        "Click any point on the edge — the distance to the center becomes the radius.",
+      ],
+      tip: "All points on a circle are the same distance (radius) from the center.",
+    },
+    ellipse: {
+      steps: [
+        "Click the center of the ellipse.",
+        "Click one end of the horizontal (major) axis — this sets the horizontal radius a.",
+        "Click one end of the vertical (minor) axis — this sets the vertical radius b.",
+      ],
+      tip: "An ellipse x²/a² + y²/b² = 1 needs a center and both radii. Click a point that is directly right/left of the center for the second click, and directly above/below for the third.",
+    },
+    hyperbola: {
+      steps: [
+        "Click the center of the hyperbola.",
+        "Click a vertex on the horizontal axis — sets the horizontal distance a.",
+        "Click a point on the vertical axis — sets the conjugate distance b.",
+      ],
+      tip: "A hyperbola x²/a² − y²/b² = 1 opens left/right from its center. The second click controls how wide the opening is; the third controls how steep the asymptotes are.",
+    },
+  };
+  const help = toolHelp[tool];
+  const scratchShapes: DrawShape[] = scratch.map((p) => ({ type: "point", x: p.x, y: p.y, label: "·" }));
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-2">
@@ -383,17 +453,77 @@ function CoordWidget({
           <Trash2 className="h-3 w-3" /> Clear
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Click the grid to add {tool} ({scratch.length}/{need[tool]}). Need at least {spec.minShapes} shape{spec.minShapes === 1 ? "" : "s"}.
-      </p>
+      <div className="rounded-lg border border-border bg-accent/30 p-3 text-xs">
+        <div className="mb-1 font-semibold capitalize">How to draw a {tool}</div>
+        <ol className="list-decimal space-y-0.5 pl-4">
+          {help.steps.map((s, i) => (
+            <li key={i} className={cn(scratch.length === i && "font-semibold text-primary")}>{s}</li>
+          ))}
+        </ol>
+        {help.tip && <p className="mt-2 text-muted-foreground">{help.tip}</p>}
+        <p className="mt-2 text-muted-foreground">
+          Click {scratch.length}/{need[tool]} for this {tool}. The shape appears automatically once you finish. Need at least {spec.minShapes} shape{spec.minShapes === 1 ? "" : "s"} total.
+        </p>
+      </div>
       <CoordinateGrid
         xMin={spec.xMin}
         xMax={spec.xMax}
         yMin={spec.yMin}
         yMax={spec.yMax}
-        shapes={shapes}
+        shapes={[...shapes, ...scratchShapes]}
         onClick={onClick}
       />
+    </div>
+  );
+}
+
+function TableWidget({
+  spec,
+  value,
+  onChange,
+  disabled,
+}: {
+  spec: Extract<InteractiveSpec, { kind: "table" }>;
+  value: unknown;
+  onChange: (v: unknown) => void;
+  disabled: boolean;
+}) {
+  const answers = (value as Record<string, string> | undefined) ?? {};
+  const set = (r: number, c: number, v: string) => onChange({ ...answers, [`${r},${c}`]: v });
+  const rows = Math.max(1, spec.rows);
+  const cols = Math.max(1, spec.cols);
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border">
+      <table className="w-full border-collapse text-sm">
+        <tbody>
+          {Array.from({ length: rows }, (_, r) => (
+            <tr key={r}>
+              {Array.from({ length: cols }, (_, c) => {
+                const cell = spec.cells[r]?.[c] ?? { value: "", blank: false };
+                if (cell.blank) {
+                  const key = `${r},${c}`;
+                  return (
+                    <td key={c} className="border border-border bg-primary/5 p-1 align-top">
+                      <Input
+                        value={answers[key] ?? ""}
+                        onChange={(e) => set(r, c, e.target.value)}
+                        disabled={disabled}
+                        placeholder="Your answer"
+                        className="h-8 border-dashed"
+                      />
+                    </td>
+                  );
+                }
+                return (
+                  <td key={c} className="border border-border bg-accent/30 p-2 align-top text-foreground">
+                    {cell.value}
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

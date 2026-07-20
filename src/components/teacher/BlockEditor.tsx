@@ -1184,7 +1184,20 @@ const INTERACTIVE_KINDS: { kind: InteractiveSpec["kind"]; label: string; Icon: t
   { kind: "lineplot", label: "Plot line plot", Icon: LineIcon },
   { kind: "coord", label: "Coordinate plane", Icon: Grid3x3 },
   { kind: "fill-image", label: "Fill image labels", Icon: MapPin },
+  { kind: "table", label: "Fill table cells", Icon: TableIcon },
 ];
+
+function makeTableCells(rows: number, cols: number, prev?: { value: string; blank: boolean; answer?: string }[][]) {
+  const out: { value: string; blank: boolean; answer?: string }[][] = [];
+  for (let r = 0; r < rows; r++) {
+    const row: { value: string; blank: boolean; answer?: string }[] = [];
+    for (let c = 0; c < cols; c++) {
+      row.push(prev?.[r]?.[c] ?? { value: "", blank: false });
+    }
+    out.push(row);
+  }
+  return out;
+}
 
 function defaultInteractiveSpec(kind: InteractiveSpec["kind"]): InteractiveSpec {
   switch (kind) {
@@ -1200,6 +1213,19 @@ function defaultInteractiveSpec(kind: InteractiveSpec["kind"]): InteractiveSpec 
       return { kind: "coord", title: "Draw the shape", instructions: "Use the tools to draw.", xMin: -5, xMax: 5, yMin: -5, yMax: 5, tools: ["point", "line"], minShapes: 1 };
     case "fill-image":
       return { kind: "fill-image", title: "Label the diagram", instructions: "Fill in every label.", imageUrl: "", pins: [] };
+    case "table":
+      return {
+        kind: "table",
+        title: "Complete the table",
+        instructions: "Fill in every highlighted cell.",
+        rows: 3,
+        cols: 3,
+        cells: makeTableCells(3, 3, [
+          [{ value: "x", blank: false }, { value: "1", blank: false }, { value: "2", blank: false }],
+          [{ value: "y", blank: false }, { value: "", blank: true, answer: "2" }, { value: "", blank: true, answer: "4" }],
+          [{ value: "y = 2x", blank: false }, { value: "", blank: false }, { value: "", blank: false }],
+        ]),
+      };
   }
 }
 
@@ -1352,7 +1378,88 @@ function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onCh
       );
     case "fill-image":
       return <FillImageEditor spec={spec} onChange={onChange} />;
+    case "table":
+      return <TableInteractiveEditor spec={spec} onChange={onChange} />;
   }
+}
+
+function TableInteractiveEditor({
+  spec,
+  onChange,
+}: {
+  spec: Extract<InteractiveSpec, { kind: "table" }>;
+  onChange: (s: InteractiveSpec) => void;
+}) {
+  const setSize = (rows: number, cols: number) => {
+    const R = Math.max(1, Math.min(20, rows));
+    const C = Math.max(1, Math.min(12, cols));
+    onChange({ ...spec, rows: R, cols: C, cells: makeTableCells(R, C, spec.cells) });
+  };
+  const updateCell = (r: number, c: number, patch: Partial<{ value: string; blank: boolean; answer: string }>) => {
+    const cells = spec.cells.map((row) => row.map((c) => ({ ...c })));
+    cells[r][c] = { ...cells[r][c], ...patch };
+    onChange({ ...spec, cells });
+  };
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Rows</Label>
+          <Input type="number" min={1} max={20} value={spec.rows} onChange={(e) => setSize(Number(e.target.value), spec.cols)} />
+        </div>
+        <div>
+          <Label className="text-xs">Columns</Label>
+          <Input type="number" min={1} max={12} value={spec.cols} onChange={(e) => setSize(spec.rows, Number(e.target.value))} />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Click <strong>Blank</strong> on any cell to mark it as one students must fill.
+        Cells shown in blue = student input. Optionally set an expected answer per blank cell.
+      </p>
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full border-collapse text-sm">
+          <tbody>
+            {Array.from({ length: spec.rows }, (_, r) => (
+              <tr key={r}>
+                {Array.from({ length: spec.cols }, (_, c) => {
+                  const cell = spec.cells[r]?.[c] ?? { value: "", blank: false };
+                  return (
+                    <td key={c} className={cn("border border-border p-1 align-top", cell.blank ? "bg-primary/10" : "bg-background")}>
+                      <div className="space-y-1">
+                        <Input
+                          value={cell.value}
+                          onChange={(e) => updateCell(r, c, { value: e.target.value })}
+                          placeholder={cell.blank ? "(hidden from student)" : "Cell text"}
+                          className="h-8"
+                        />
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => updateCell(r, c, { blank: !cell.blank })}
+                            className={cn("rounded border px-1.5 py-0.5 text-[10px]", cell.blank ? "border-primary bg-primary text-primary-foreground" : "border-border")}
+                          >
+                            {cell.blank ? "Blank ✓" : "Blank"}
+                          </button>
+                          {cell.blank && (
+                            <Input
+                              value={cell.answer ?? ""}
+                              onChange={(e) => updateCell(r, c, { answer: e.target.value })}
+                              placeholder="Answer (optional)"
+                              className="h-7 text-xs"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function FillImageEditor({
