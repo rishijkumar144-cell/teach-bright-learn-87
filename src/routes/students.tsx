@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Users, ChevronDown, ChevronUp, Save, Trash2, Eye, EyeOff } from "lucide-react";
+import { Users, ChevronDown, ChevronUp, Save, Trash2, Eye, EyeOff, Sparkles, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { generateStudentInsights } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { TeacherLayout } from "@/components/teacher/TeacherLayout";
 import { Card, CardContent } from "@/components/ui/card";
