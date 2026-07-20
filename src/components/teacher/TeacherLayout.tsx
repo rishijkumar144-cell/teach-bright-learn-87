@@ -186,7 +186,7 @@ export function TeacherLayout({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={onCreate}
-          className="focus-dim fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-4 text-sm font-semibold text-primary-foreground shadow-lift sm:hidden"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-primary px-5 py-4 text-sm font-semibold text-primary-foreground shadow-lift sm:hidden"
           aria-label="Create new lesson"
         >
           <Plus className="h-5 w-5" />
