@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { useStore } from "@/lib/store";
 import type { Block, Submission } from "@/lib/types";
 import { InteractiveWidget } from "@/components/teacher/InteractiveRunner";
-import { GRADED_TYPES } from "@/components/teacher/BlockEditor";
+import { GRADED_TYPES, ParagraphWithMath } from "@/components/teacher/BlockEditor";
 import type { InteractiveSpec } from "@/lib/charts";
 
 export const Route = createFileRoute("/students")({
@@ -607,7 +607,7 @@ function StudentInsights({ studentName, studentEmail }: { studentName: string; s
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Coach's summary
               </div>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{result.summary}</p>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed"><ParagraphWithMath text={result.summary} /></p>
             </div>
 
             {result.mistakes.length > 0 && (
@@ -628,13 +628,13 @@ function StudentInsights({ studentName, studentEmail }: { studentName: string; s
                       <div className="text-xs text-muted-foreground">
                         {m.subject ? `${m.subject} · ` : ""}{m.lessonTitle}
                       </div>
-                      <div className="mt-1 font-medium">{m.question}</div>
+                      <div className="mt-1 font-medium"><ParagraphWithMath text={m.question} /></div>
                       <div className="mt-1 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
                         <div className="rounded-lg bg-destructive/10 px-2 py-1 text-destructive">
-                          <span className="font-semibold">Answered:</span> {m.studentAnswer}
+                          <span className="font-semibold">Answered:</span> <ParagraphWithMath text={String(m.studentAnswer ?? "")} />
                         </div>
                         <div className="rounded-lg bg-[oklch(0.7_0.15_160)/15%] px-2 py-1 text-[oklch(0.4_0.15_160)] dark:text-[oklch(0.85_0.15_160)]">
-                          <span className="font-semibold">Correct:</span> {m.correctAnswer}
+                          <span className="font-semibold">Correct:</span> <ParagraphWithMath text={String(m.correctAnswer ?? "")} />
                         </div>
                       </div>
                     </li>
