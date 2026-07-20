@@ -19,7 +19,6 @@ const KEY = "mathly.a11y.v1";
 interface A11yPrefs {
   theme: "light" | "dark";
   dyslexiaFont: boolean;
-  focusMode: boolean;
   textScale: number; // 90 - 150
   lineSpacing: number; // 1.4 - 2.2
   highContrast: boolean;
@@ -28,7 +27,6 @@ interface A11yPrefs {
 const DEFAULTS: A11yPrefs = {
   theme: "light",
   dyslexiaFont: false,
-  focusMode: false,
   textScale: 100,
   lineSpacing: 1.6,
   highContrast: false,
