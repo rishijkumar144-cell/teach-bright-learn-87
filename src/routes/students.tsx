@@ -476,3 +476,123 @@ function SubmissionDetail({
   );
 }
 
+interface Mistake {
+  lessonTitle: string;
+  subject: string;
+  question: string;
+  studentAnswer: string;
+  correctAnswer: string;
+  submittedAt: string;
+}
+
+interface InsightsResult {
+  mistakes: Mistake[];
+  summary: string;
+  studentName?: string;
+  totalGraded?: number;
+}
+
+function StudentInsights({ studentName, studentEmail }: { studentName: string; studentEmail: string }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<InsightsResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  const run = useServerFn(generateStudentInsights);
+
+  async function generate() {
+    if (!studentEmail) {
+      setError("This student has no email on file. Enable 'One response per email' or ask the student to enter an email on new submissions.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await run({ data: { studentEmail } });
+      setResult(r as InsightsResult);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate insights");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const visibleMistakes = result?.mistakes ? (showAll ? result.mistakes : result.mistakes.slice(0, 5)) : [];
+
+  return (
+    <Card className="card-soft">
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" /> AI Insights
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Analyze {studentName}'s mistakes across all their submissions and get suggested focus areas.
+            </p>
+            {studentEmail && (
+              <p className="mt-1 text-xs text-muted-foreground">Tracking by: {studentEmail}</p>
+            )}
+          </div>
+          <Button onClick={generate} disabled={busy || !studentEmail} size="sm">
+            {busy ? (
+              <><Loader2 className="h-4 w-4 animate-spin" /> Analyzing…</>
+            ) : (
+              <><Sparkles className="h-4 w-4" /> {result ? "Regenerate" : "Analyze"}</>
+            )}
+          </Button>
+        </div>
+
+        {error && (
+          <div className="mt-4 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
+
+        {result && (
+          <div className="mt-4 space-y-4">
+            <div className="rounded-xl border border-border bg-accent/30 p-4">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Coach's summary
+              </div>
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed">{result.summary}</p>
+            </div>
+
+            {result.mistakes.length > 0 && (
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Mistake history ({result.mistakes.length})
+                  </div>
+                  {result.mistakes.length > 5 && (
+                    <Button variant="ghost" size="sm" onClick={() => setShowAll((v) => !v)}>
+                      {showAll ? "Show top 5" : "Show all"}
+                    </Button>
+                  )}
+                </div>
+                <ul className="space-y-2">
+                  {visibleMistakes.map((m, i) => (
+                    <li key={i} className="rounded-xl border border-border bg-card p-3 text-sm">
+                      <div className="text-xs text-muted-foreground">
+                        {m.subject ? `${m.subject} · ` : ""}{m.lessonTitle}
+                      </div>
+                      <div className="mt-1 font-medium">{m.question}</div>
+                      <div className="mt-1 grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+                        <div className="rounded-lg bg-destructive/10 px-2 py-1 text-destructive">
+                          <span className="font-semibold">Answered:</span> {m.studentAnswer}
+                        </div>
+                        <div className="rounded-lg bg-[oklch(0.7_0.15_160)/15%] px-2 py-1 text-[oklch(0.4_0.15_160)] dark:text-[oklch(0.85_0.15_160)]">
+                          <span className="font-semibold">Correct:</span> {m.correctAnswer}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
