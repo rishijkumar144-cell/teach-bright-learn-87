@@ -145,12 +145,11 @@ function StudentsPage() {
                             {formatDistanceToNow(s.submittedAt, { addSuffix: true })}
                           </div>
                         </div>
-                        {s.autoTotal ? (
-                          <Badge variant="secondary" className="rounded-full">
-                            Auto {s.autoScore}/{s.autoTotal}
+                        {s.gradedAt && s.manualTotal && s.manualTotal > 0 ? (
+                          <Badge className="rounded-full bg-[oklch(0.7_0.15_160)/15%] text-[oklch(0.4_0.15_160)] dark:text-[oklch(0.85_0.15_160)] border-0">
+                            {Math.round(((s.manualScore ?? 0) / s.manualTotal) * 1000) / 10}%
                           </Badge>
-                        ) : null}
-                        {s.gradedAt ? (
+                        ) : s.gradedAt ? (
                           <Badge className="rounded-full bg-[oklch(0.7_0.15_160)/15%] text-[oklch(0.4_0.15_160)] dark:text-[oklch(0.85_0.15_160)] border-0">
                             Graded
                           </Badge>
