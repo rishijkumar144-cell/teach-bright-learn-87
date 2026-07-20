@@ -23,6 +23,7 @@ type GameKind = "flashcards" | "memory" | "bomb";
 
 export function GamesHub({ seedQuestions }: GamePickerProps) {
   const [topic, setTopic] = useState("");
+  const [count, setCount] = useState(25);
   const [questions, setQuestions] = useState<StudyQA[]>(seedQuestions ?? []);
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState<GameKind | null>(null);
@@ -32,9 +33,10 @@ export function GamesHub({ seedQuestions }: GamePickerProps) {
       toast.error("Enter a topic first.");
       return;
     }
+    const safeCount = Math.max(5, Math.min(75, Math.round(count) || 25));
     setLoading(true);
     try {
-      const res = await generateGameQuestions({ data: { topic: topic.trim(), count: 25 } });
+      const res = await generateGameQuestions({ data: { topic: topic.trim(), count: safeCount } });
       if (!res.questions.length) throw new Error("No questions generated");
       setQuestions(res.questions);
       toast.success(`Loaded ${res.questions.length} questions on "${topic}"`);
