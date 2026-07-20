@@ -15,6 +15,7 @@ interface LessonRow {
   status: string;
   require_student_name: boolean;
   one_response_per_email?: boolean;
+  solution_timing?: string;
   visits: number;
   created_at: string;
   updated_at: string;
@@ -52,6 +53,7 @@ export function rowToLesson(row: LessonRow): Lesson {
     status: (row.status as LessonStatus) || "draft",
     requireStudentName: row.require_student_name,
     oneResponsePerEmail: !!row.one_response_per_email,
+    solutionTiming: row.solution_timing === "end" ? "end" : "immediate",
     visits: row.visits,
     createdAt: new Date(row.created_at).getTime(),
     updatedAt: new Date(row.updated_at).getTime(),
@@ -73,6 +75,7 @@ export function lessonToUpdate(l: Partial<Lesson>): Record<string, unknown> {
   if (l.status !== undefined) out.status = l.status;
   if (l.requireStudentName !== undefined) out.require_student_name = l.requireStudentName;
   if (l.oneResponsePerEmail !== undefined) out.one_response_per_email = l.oneResponsePerEmail;
+  if (l.solutionTiming !== undefined) out.solution_timing = l.solutionTiming;
   if (l.publishedAt !== undefined) {
     out.published_at = l.publishedAt ? new Date(l.publishedAt).toISOString() : null;
   }

@@ -262,6 +262,26 @@ function LessonEditor() {
                     onCheckedChange={(v) => patch({ oneResponsePerEmail: v })}
                   />
                 </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="font-medium">Show solutions</div>
+                    <p className="text-sm text-muted-foreground">
+                      Choose when students see the correct answer and explanation.
+                    </p>
+                  </div>
+                  <div className="shrink-0">
+                    <select
+                      className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      value={draft.solutionTiming ?? "immediate"}
+                      onChange={(e) =>
+                        patch({ solutionTiming: e.target.value as "immediate" | "end" })
+                      }
+                    >
+                      <option value="immediate">After each question is submitted</option>
+                      <option value="end">Only after the lesson is submitted</option>
+                    </select>
+                  </div>
+                </div>
                 <div className="border-t border-border pt-5">
                   <Button
                     variant="outline"

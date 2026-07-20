@@ -29,6 +29,7 @@ export type Database = {
           published_at: string | null
           require_student_name: boolean
           slug: string
+          solution_timing: string
           status: string
           subject: string
           thumbnail: string
@@ -50,6 +51,7 @@ export type Database = {
           published_at?: string | null
           require_student_name?: boolean
           slug: string
+          solution_timing?: string
           status?: string
           subject?: string
           thumbnail?: string
@@ -71,6 +73,7 @@ export type Database = {
           published_at?: string | null
           require_student_name?: boolean
           slug?: string
+          solution_timing?: string
           status?: string
           subject?: string
           thumbnail?: string

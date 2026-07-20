@@ -81,8 +81,11 @@ export function LessonPlayer({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false);
   const [missing, setMissing] = useState<Set<string>>(new Set());
   const [pageIdx, setPageIdx] = useState(0);
+
+  const revealSolutions = lesson.solutionTiming !== "end" || reviewMode;
 
   const pages = useMemo(() => paginate(lesson.blocks), [lesson.blocks]);
   const currentPage = pages[pageIdx] ?? [];
@@ -134,8 +137,17 @@ export function LessonPlayer({
       return;
     }
     setMissing(new Set());
+    // In "end" mode, reveal all solutions in a review view before the completion screen.
+    if (lesson.solutionTiming === "end" && !reviewMode) {
+      setReviewMode(true);
+      setPageIdx(0);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      onFinish?.({ studentName: name, studentEmail: email, answers });
+      toast.success("Answers submitted — review the solutions below.");
+      return;
+    }
     setDone(true);
-    onFinish?.({ studentName: name, studentEmail: email, answers });
+    if (!reviewMode) onFinish?.({ studentName: name, studentEmail: email, answers });
   };
 
   const submitBlock = (b: Block) => {
@@ -250,6 +262,14 @@ export function LessonPlayer({
         {pageIdx === 0 && lesson.description && (
           <p className="text-lg leading-relaxed text-muted-foreground">{lesson.description}</p>
         )}
+        {reviewMode && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm">
+            <div className="font-semibold text-primary">Reviewing your answers</div>
+            <p className="mt-1 text-muted-foreground">
+              Your responses have been submitted. Correct answers and solutions are shown below.
+            </p>
+          </div>
+        )}
         {pageBlocks.map((b) => (
           <div key={b.id} id={`block-${b.id}`}>
             <BlockRender
@@ -267,6 +287,7 @@ export function LessonPlayer({
               }}
               isMissing={missing.has(b.id)}
               submitted={!!submitted[b.id]}
+              reveal={revealSolutions}
               onSubmit={() => submitBlock(b)}
             />
           </div>
@@ -291,7 +312,7 @@ export function LessonPlayer({
             </Button>
           ) : (
             <Button size="lg" className="h-12 w-full text-base" onClick={handleFinish}>
-              Submit lesson
+              {reviewMode ? "Finish lesson" : "Submit lesson"}
             </Button>
           )}
         </div>
@@ -306,6 +327,7 @@ function BlockRender({
   onChange,
   isMissing,
   submitted,
+  reveal,
   onSubmit,
 }: {
   block: Block;
@@ -313,9 +335,11 @@ function BlockRender({
   onChange: (v: unknown) => void;
   isMissing: boolean;
   submitted: boolean;
+  reveal: boolean;
   onSubmit: () => void;
 }) {
   const d = block.data as Record<string, any>;
+  const revealed = submitted && reveal;
   switch (block.type) {
     case "heading":
       return <h2 className="text-2xl font-bold tracking-tight">{d.text}</h2>;
@@ -406,6 +430,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
@@ -416,8 +441,8 @@ function BlockRender({
             className="space-y-2"
           >
             {(d.options as string[]).map((opt, i) => {
-              const isCorrect = submitted && i === Number(d.correct);
-              const isChosenWrong = submitted && value === i && i !== Number(d.correct);
+              const isCorrect = revealed && i === Number(d.correct);
+              const isChosenWrong = revealed && value === i && i !== Number(d.correct);
               return (
                 <label
                   key={i}
@@ -447,13 +472,14 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
           <div className="space-y-2">
             {(d.options as string[]).map((opt, i) => {
-              const isCorrect = submitted && correct.includes(i);
-              const isChosenWrong = submitted && sel.includes(i) && !correct.includes(i);
+              const isCorrect = revealed && correct.includes(i);
+              const isChosenWrong = revealed && sel.includes(i) && !correct.includes(i);
               return (
                 <label
                   key={i}
@@ -491,6 +517,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
@@ -502,8 +529,8 @@ function BlockRender({
           >
             {["true", "false"].map((v) => {
               const val = v === "true";
-              const isCorrect = submitted && val === !!d.correct;
-              const isChosenWrong = submitted && value === val && val !== !!d.correct;
+              const isCorrect = revealed && val === !!d.correct;
+              const isChosenWrong = revealed && value === val && val !== !!d.correct;
               return (
                 <label
                   key={v}
@@ -531,10 +558,11 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
           extra={
-            submitted && d.answer ? (
+            revealed && d.answer ? (
               <div className="mt-2 text-xs text-muted-foreground">
                 Sample answer: <span className="font-medium">{d.answer}</span>
               </div>
@@ -558,6 +586,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
           submitLabel="Submit answer"
@@ -584,6 +613,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
@@ -645,6 +675,7 @@ function QuestionCard({
   isMissing,
   explanation,
   submitted,
+  revealed,
   onSubmit,
   canSubmit,
   submitLabel = "Submit",
@@ -657,6 +688,7 @@ function QuestionCard({
   isMissing?: boolean;
   explanation?: string;
   submitted?: boolean;
+  revealed?: boolean;
   onSubmit?: () => void;
   canSubmit?: boolean;
   submitLabel?: string;
@@ -695,8 +727,8 @@ function QuestionCard({
           </Button>
         </div>
       )}
-      {submitted && extra}
-      {submitted && explanation && (
+      {revealed && extra}
+      {revealed && explanation && (
         <div className="mt-4 rounded-xl border border-primary/30 bg-primary/5 p-3 text-sm">
           <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">
             {submitLabel === "Submit answer" ? "Sample solution" : "Explanation"}
