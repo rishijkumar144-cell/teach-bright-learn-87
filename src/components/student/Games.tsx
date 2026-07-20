@@ -706,7 +706,7 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
           <Bomb className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
           <h3 className="mt-3 text-2xl font-bold">Level {level} clear!</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {level >= TOTAL_LEVELS ? "Final wall down!" : `Next up: level ${level + 1} (${wallSizeForLevel(level + 1)} bricks).`}
+            {level >= TOTAL_LEVELS ? "Final wall down!" : `Next up: level ${level + 1} — ${LEVELS[level].name}.`}
           </p>
           <Button onClick={nextLevel} className="mt-4">
             {level >= TOTAL_LEVELS ? "Finish" : "Next level"} <ChevronRight className="ml-1 h-4 w-4" />
