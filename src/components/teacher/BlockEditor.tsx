@@ -844,9 +844,9 @@ function ParagraphEditor({
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
-  const insertEquation = () => {
+  const insertLatex = (latex: string) => {
+    const snippet = `$${latex}$`;
     const ta = ref.current;
-    const snippet = "$a^2 + b^2 = c^2$";
     if (!ta) {
       onChange((value ?? "") + " " + snippet);
       return;
@@ -857,32 +857,24 @@ function ParagraphEditor({
     onChange(next);
     requestAnimationFrame(() => {
       ta.focus();
-      const pos = start + 1;
-      ta.setSelectionRange(pos, pos + snippet.length - 2);
+      const pos = start + snippet.length;
+      ta.setSelectionRange(pos, pos);
     });
   };
 
   return (
     <div>
       <div className="mb-2 flex items-center gap-1.5">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={insertEquation}
-          className="h-8"
-        >
-          <Sigma className="h-3.5 w-3.5" /> Insert equation
-        </Button>
+        <EquationEditor onInsert={insertLatex} />
         <span className="text-xs text-muted-foreground">
-          Wrap LaTeX in <code className="font-mono">$…$</code> for inline math.
+          Click to open the visual editor — no LaTeX required.
         </span>
       </div>
       <Textarea
         ref={ref}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Write your paragraph… use $x^2$ for inline equations."
+        placeholder="Write your paragraph… click Insert equation for math."
         rows={4}
       />
       {value.includes("$") && (
@@ -896,6 +888,7 @@ function ParagraphEditor({
     </div>
   );
 }
+
 
 export function ParagraphWithMath({ text }: { text: string }) {
   const parts = (text ?? "").split(/(\$[^$\n]+\$)/g);
