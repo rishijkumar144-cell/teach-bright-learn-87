@@ -43,6 +43,7 @@ export interface Lesson {
   status: LessonStatus;
   requireStudentName: boolean;
   oneResponsePerEmail: boolean;
+  solutionTiming: "immediate" | "end";
   createdAt: number;
   updatedAt: number;
   publishedAt: number | null;
