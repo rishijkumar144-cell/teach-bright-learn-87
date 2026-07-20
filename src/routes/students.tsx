@@ -133,7 +133,8 @@ function StudentsPage() {
                               — {lesson?.title ?? "Deleted lesson"}
                             </span>
                           </div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="truncate text-xs text-muted-foreground">
+                            {s.studentEmail ? <span>{s.studentEmail} · </span> : null}
                             {formatDistanceToNow(s.submittedAt, { addSuffix: true })}
                           </div>
                         </div>
