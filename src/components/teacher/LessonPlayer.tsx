@@ -327,6 +327,7 @@ function BlockRender({
   onChange,
   isMissing,
   submitted,
+  reveal,
   onSubmit,
 }: {
   block: Block;
@@ -334,9 +335,11 @@ function BlockRender({
   onChange: (v: unknown) => void;
   isMissing: boolean;
   submitted: boolean;
+  reveal: boolean;
   onSubmit: () => void;
 }) {
   const d = block.data as Record<string, any>;
+  const revealed = submitted && reveal;
   switch (block.type) {
     case "heading":
       return <h2 className="text-2xl font-bold tracking-tight">{d.text}</h2>;
