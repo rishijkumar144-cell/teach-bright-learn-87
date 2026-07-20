@@ -122,6 +122,7 @@ export type Database = {
           manual_score: number | null
           manual_total: number | null
           student_email: string
+          student_id: string | null
           student_name: string
           submitted_at: string
         }
@@ -136,6 +137,7 @@ export type Database = {
           manual_score?: number | null
           manual_total?: number | null
           student_email?: string
+          student_id?: string | null
           student_name?: string
           submitted_at?: string
         }
@@ -150,6 +152,7 @@ export type Database = {
           manual_score?: number | null
           manual_total?: number | null
           student_email?: string
+          student_id?: string | null
           student_name?: string
           submitted_at?: string
         }
@@ -163,15 +166,42 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "teacher" | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -298,6 +328,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["teacher", "student"],
+    },
   },
 } as const

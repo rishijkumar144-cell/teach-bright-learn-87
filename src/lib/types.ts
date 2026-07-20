@@ -50,11 +50,14 @@ export interface Lesson {
   visits: number;
 }
 
+export type UserRole = "teacher" | "student";
+
 export interface Teacher {
   id: string;
   email: string;
   displayName: string;
   school: string;
+  role: UserRole;
 }
 
 export interface Submission {

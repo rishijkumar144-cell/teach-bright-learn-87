@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StudentsRouteImport } from './routes/students'
+import { Route as StudentRouteImport } from './routes/student'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as PublishedRouteImport } from './routes/published'
@@ -23,6 +24,11 @@ import { Route as LessonSlugRouteImport } from './routes/lesson.$slug'
 const StudentsRoute = StudentsRouteImport.update({
   id: '/students',
   path: '/students',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StudentRoute = StudentRouteImport.update({
+  id: '/student',
+  path: '/student',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsRoute = SettingsRouteImport.update({
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/published': typeof PublishedRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/student': typeof StudentRoute
   '/students': typeof StudentsRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/published': typeof PublishedRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/student': typeof StudentRoute
   '/students': typeof StudentsRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/published': typeof PublishedRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
+  '/student': typeof StudentRoute
   '/students': typeof StudentsRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/published'
     | '/reset-password'
     | '/settings'
+    | '/student'
     | '/students'
     | '/lesson/$slug'
     | '/lessons/$id'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/published'
     | '/reset-password'
     | '/settings'
+    | '/student'
     | '/students'
     | '/lesson/$slug'
     | '/lessons/$id'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/published'
     | '/reset-password'
     | '/settings'
+    | '/student'
     | '/students'
     | '/lesson/$slug'
     | '/lessons/$id'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   PublishedRoute: typeof PublishedRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
+  StudentRoute: typeof StudentRoute
   StudentsRoute: typeof StudentsRoute
   LessonSlugRoute: typeof LessonSlugRoute
   LessonsIdRoute: typeof LessonsIdRoute
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/students'
       fullPath: '/students'
       preLoaderRoute: typeof StudentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/student': {
+      id: '/student'
+      path: '/student'
+      fullPath: '/student'
+      preLoaderRoute: typeof StudentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings': {
@@ -242,6 +262,7 @@ const rootRouteChildren: RootRouteChildren = {
   PublishedRoute: PublishedRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
+  StudentRoute: StudentRoute,
   StudentsRoute: StudentsRoute,
   LessonSlugRoute: LessonSlugRoute,
   LessonsIdRoute: LessonsIdRoute,
@@ -250,13 +271,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

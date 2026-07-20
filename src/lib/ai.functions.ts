@@ -359,3 +359,142 @@ Keep it under 200 words. Use plain paragraphs, no markdown headings.`;
       totalGraded,
     };
   });
+
+// ============================================================
+// Student-facing AI: self-analyzer, study chat, study question generator
+// ============================================================
+
+const StudySelfInput = z.object({});
+
+export const analyzeMyProgress = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(() => ({}))
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+
+    const { data: subs, error: sErr } = await supabase
+      .from("submissions")
+      .select("id, lesson_id, answers, submitted_at, student_name")
+      .eq("student_id", userId)
+      .order("submitted_at", { ascending: false });
+    if (sErr) throw new Error(sErr.message);
+    if (!subs || subs.length === 0) {
+      return { mistakes: [], strengths: [], summary: "You haven't completed any lessons yet. Open a lesson link from your teacher to get started!", totalGraded: 0 };
+    }
+
+    const lessonIds = Array.from(new Set(subs.map((s) => s.lesson_id)));
+    const { data: lessons, error: lErr } = await supabase
+      .from("lessons")
+      .select("id, title, subject, blocks")
+      .in("id", lessonIds);
+    if (lErr) throw new Error(lErr.message);
+    const lessonMap = new Map<string, { title: string; subject: string; blocks: unknown }>();
+    for (const l of lessons ?? []) lessonMap.set(l.id, { title: l.title, subject: l.subject, blocks: l.blocks });
+
+    const mistakes: { lessonTitle: string; subject: string; question: string; studentAnswer: string; correctAnswer: string }[] = [];
+    const strengths: { lessonTitle: string; subject: string; question: string }[] = [];
+    let totalGraded = 0;
+
+    for (const s of subs) {
+      const lesson = lessonMap.get(s.lesson_id);
+      if (!lesson) continue;
+      const blocks = Array.isArray(lesson.blocks) ? (lesson.blocks as { id: string; type: string; data: Record<string, unknown> }[]) : [];
+      const answers = (s.answers as Record<string, unknown>) ?? {};
+      for (const b of blocks) {
+        const d = b.data ?? {};
+        const ans = answers[b.id];
+        if (ans === undefined || ans === null || ans === "") continue;
+        let correct: string | null = null;
+        let student = "";
+        let wrong = false;
+        if (b.type === "mcq" && typeof ans === "number") {
+          totalGraded++;
+          const opts = (d.options as string[]) ?? [];
+          const c = d.correct as number;
+          correct = opts[c] ?? "";
+          student = opts[ans] ?? String(ans);
+          wrong = ans !== c;
+        } else if (b.type === "truefalse" && typeof ans === "boolean") {
+          totalGraded++;
+          correct = d.correct ? "True" : "False";
+          student = ans ? "True" : "False";
+          wrong = ans !== d.correct;
+        } else if (b.type === "numeric" && typeof ans === "number") {
+          totalGraded++;
+          correct = String(d.answer ?? "");
+          student = String(ans);
+          wrong = Number(d.answer) !== ans;
+        } else if (b.type === "short" && typeof ans === "string") {
+          const expected = String(d.answer ?? "").trim().toLowerCase();
+          if (expected) {
+            totalGraded++;
+            correct = String(d.answer);
+            student = ans;
+            wrong = ans.trim().toLowerCase() !== expected;
+          }
+        }
+        if (correct === null) continue;
+        const q = String(d.question ?? d.text ?? "");
+        if (wrong) {
+          mistakes.push({ lessonTitle: lesson.title, subject: lesson.subject, question: q, studentAnswer: student, correctAnswer: correct });
+        } else {
+          strengths.push({ lessonTitle: lesson.title, subject: lesson.subject, question: q });
+        }
+      }
+    }
+
+    if (mistakes.length === 0) {
+      return { mistakes, strengths, summary: `Great work! You've answered ${totalGraded} auto-graded questions correctly. Keep going!`, totalGraded };
+    }
+
+    const bullets = mistakes.slice(0, 30).map((m, i) => `${i + 1}. [${m.subject || "General"}] ${m.question}\n   Your answer: ${m.studentAnswer}\n   Correct: ${m.correctAnswer}`).join("\n");
+    const summary = await callGateway({
+      messages: [
+        { role: "system", content: "You are a friendly, encouraging tutor. Speak directly to the student (using 'you'). Keep language simple and kind — this may be read by students with dyslexia or ADHD, so use short sentences and clear structure." },
+        { role: "user", content: `Here are questions I got wrong recently:\n\n${bullets}\n\nWrite a short, upbeat report for me (the student). Include:\n1) The 2-3 topics I should focus on\n2) One or two study tips specifically for these topics\n3) A single sentence of encouragement.\nUnder 180 words, plain paragraphs, no markdown headings.` },
+      ],
+      temperature: 0.6,
+    });
+
+    return { mistakes, strengths, summary: summary.trim(), totalGraded };
+  });
+
+const StudyChatInput = z.object({
+  messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) })).max(30),
+});
+
+export const studyChat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => StudyChatInput.parse(input))
+  .handler(async ({ data }) => {
+    const reply = await callGateway({
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Mathly Study Buddy — a friendly AI tutor for students. Your primary job is to GENERATE PRACTICE QUESTIONS for the student to help them study. When the student names a topic, produce 2-4 practice questions of varying difficulty with clear answers and short explanations. If the student answers, evaluate it kindly and explain. Use inline $...$ for math. Keep answers concise. Use simple language suitable for readers with dyslexia/ADHD.",
+        },
+        ...data.messages,
+      ],
+      temperature: 0.7,
+    });
+    return { reply: reply.trim() };
+  });
+
+const GameQuestionsInput = z.object({
+  topic: z.string().min(1).max(200),
+  count: z.number().min(3).max(20).default(8),
+});
+
+export const generateGameQuestions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => GameQuestionsInput.parse(input))
+  .handler(async ({ data }) => {
+    const result = await callJson<{ questions: { q: string; a: string }[] }>(
+      "You generate flashcard-style study questions for students. Keep each question short (under 100 chars) and each answer to a single fact, number, or short phrase (under 60 chars). Use inline $...$ for math.",
+      `Generate ${data.count} short study Q&A pairs about: ${data.topic}. Mix easy and medium difficulty.`,
+      `{ "questions": [ { "q": string, "a": string }, ... ] }`,
+    );
+    const qs = (result.questions ?? []).slice(0, data.count).filter((q) => q.q && q.a);
+    return { questions: qs };
+  });

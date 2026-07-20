@@ -29,7 +29,7 @@ interface StoreContext {
   refreshLessons: () => Promise<void>;
   refreshSubmissions: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string, displayName: string) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, displayName: string, role?: "teacher" | "student") => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   updateTeacher: (patch: Partial<Teacher>) => Promise<void>;
   createLesson: () => Promise<Lesson | null>;
@@ -60,21 +60,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   const loadProfile = useCallback(async (userId: string, email: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
+    const [profileRes, roleRes] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+    ]);
+    const roleValue = (roleRes.data?.role === "student" ? "student" : "teacher") as
+      | "teacher"
+      | "student";
+    const data = profileRes.data;
     if (data) {
       setTeacher({
         id: data.id,
         email: data.email,
         displayName: data.display_name || email.split("@")[0],
         school: data.school || "",
+        role: roleValue,
       });
     } else {
-      // Trigger should have created it; fall back to session-only profile.
-      setTeacher({ id: userId, email, displayName: email.split("@")[0], school: "" });
+      setTeacher({
+        id: userId,
+        email,
+        displayName: email.split("@")[0],
+        school: "",
+        role: roleValue,
+      });
     }
   }, []);
 
@@ -141,14 +150,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return error ? { error: error.message } : {};
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, displayName: string) => {
-    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
+  const signUp = useCallback(async (email: string, password: string, displayName: string, role: "teacher" | "student" = "teacher") => {
+    const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/${role === "student" ? "student" : "dashboard"}` : undefined;
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: redirectTo,
-        data: { display_name: displayName },
+        data: { display_name: displayName, role },
       },
     });
     return error ? { error: error.message } : {};
