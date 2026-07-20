@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/lib/store";
 import type { Block, Submission } from "@/lib/types";
+import { InteractiveWidget } from "@/components/teacher/InteractiveRunner";
+import type { InteractiveSpec } from "@/lib/charts";
 
 export const Route = createFileRoute("/students")({
   component: StudentsPage,
