@@ -622,6 +622,18 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
     case "truefalse":
       return (
         <BlockShell icon={def.icon} label={def.label}>
+          <div className="mb-2 flex justify-end">
+            <AiGenerateButton
+              kind="truefalse"
+              onGenerated={(r) =>
+                onChange({
+                  question: String(r.question ?? ""),
+                  correct: !!r.correct,
+                  explanation: String(r.explanation ?? ""),
+                })
+              }
+            />
+          </div>
           <Textarea
             value={d.question ?? ""}
             onChange={(e) => onChange({ question: e.target.value })}
