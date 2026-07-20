@@ -289,6 +289,38 @@ function SubmissionDetail({
     return String(ans);
   };
 
+  const renderSolution = (b: Block): React.ReactNode => {
+    const d = b.data as Record<string, unknown>;
+    switch (b.type) {
+      case "mcq": {
+        const opts = (d.options as string[]) ?? [];
+        const idx = d.correct as number | undefined;
+        if (typeof idx !== "number") return null;
+        return <span>{opts[idx] ?? `Option ${idx + 1}`}</span>;
+      }
+      case "checkbox": {
+        const opts = (d.options as string[]) ?? [];
+        const arr = (d.correct as number[]) ?? [];
+        if (!arr.length) return null;
+        return <span>{arr.map((i) => opts[i] ?? `Option ${i + 1}`).join(", ")}</span>;
+      }
+      case "truefalse":
+        if (typeof d.correct !== "boolean") return null;
+        return <span>{d.correct ? "True" : "False"}</span>;
+      case "numeric":
+        if (d.answer === undefined || d.answer === "") return null;
+        return <span>{String(d.answer)}</span>;
+      case "short":
+        if (!d.answer) return null;
+        return <span>{String(d.answer)}</span>;
+      case "open":
+      case "reflection":
+        return null;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="border-t border-border bg-background/50 p-5 space-y-5">
       {submission.studentEmail && (
