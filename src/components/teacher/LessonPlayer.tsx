@@ -431,6 +431,7 @@ function BlockRender({
           explanation={d.explanation}
           submitted={submitted}
           revealed={revealed}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
@@ -472,6 +473,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
@@ -518,6 +520,7 @@ function BlockRender({
           explanation={d.explanation}
           submitted={submitted}
           revealed={revealed}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
         >
@@ -559,6 +562,7 @@ function BlockRender({
           explanation={d.explanation}
           submitted={submitted}
           revealed={revealed}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
           extra={
@@ -587,6 +591,7 @@ function BlockRender({
           explanation={d.explanation}
           submitted={submitted}
           revealed={revealed}
+          revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
           submitLabel="Submit answer"
@@ -613,6 +618,7 @@ function BlockRender({
           isMissing={isMissing}
           explanation={d.explanation}
           submitted={submitted}
+          revealed={revealed}
           revealed={revealed}
           onSubmit={onSubmit}
           canSubmit={hasAnswer(block, value)}
@@ -661,6 +667,7 @@ function BlockRender({
           onChange={onChange}
           onSubmit={onSubmit}
           submitted={submitted}
+          revealed={revealed}
           isMissing={isMissing}
         />
       );
