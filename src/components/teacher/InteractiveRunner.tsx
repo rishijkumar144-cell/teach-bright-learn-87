@@ -372,7 +372,9 @@ function CoordWidget({
   const availableTools = spec.tools.length ? spec.tools : (["point", "line"] as ToolKind[]);
   const [tool, setTool] = useState<ToolKind>(availableTools[0]);
   const [scratch, setScratch] = useState<Array<{ x: number; y: number }>>([]);
-  const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3 };
+  const [shadeAbove, setShadeAbove] = useState(true);
+  const [shadeStrict, setShadeStrict] = useState(false);
+  const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3, halfplane: 2 };
 
   const onClick = (x: number, y: number) => {
     if (disabled) return;
@@ -387,6 +389,7 @@ function CoordWidget({
       case "circle": shape = { type: "circle", cx: n[0].x, cy: n[0].y, rx: n[1].x, ry: n[1].y }; break;
       case "ellipse": shape = { type: "ellipse", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }; break;
       case "hyperbola": shape = { type: "hyperbola", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }; break;
+      case "halfplane": shape = { type: "halfplane", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y, above: shadeAbove, strict: shadeStrict }; break;
     }
     onChange([...shapes, shape]);
   };
@@ -431,7 +434,16 @@ function CoordWidget({
       ],
       tip: "A hyperbola x²/a² − y²/b² = 1 opens left/right from its center. The second click controls how wide the opening is; the third controls how steep the asymptotes are.",
     },
+    halfplane: {
+      steps: [
+        "Choose which side to shade (above / below) and whether the line is included.",
+        "Click two points to define the boundary line.",
+        "The chosen side of the line will fill in as the solution region.",
+      ],
+      tip: "For y > mx + b or y ≥ mx + b, shade Above with strict (dashed) or inclusive (solid). For y < mx + b use Below. For a vertical line x = c, Above shades the right side.",
+    },
   };
+
   const help = toolHelp[tool];
   const scratchShapes: DrawShape[] = scratch.map((p) => ({ type: "point", x: p.x, y: p.y, label: "·" }));
 
