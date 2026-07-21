@@ -370,8 +370,9 @@ export function CoordinateGrid({
     >
       {gridLines}
       {shapes.map((s, i) => (
-        <ShapeSvg key={i} shape={s} sx={sx} sy={sy} />
+        <ShapeSvg key={i} shape={s} sx={sx} sy={sy} vw={W} vh={H} />
       ))}
+
       {/* axis tick labels */}
       {Math.ceil(xMin) <= 0 && Math.floor(xMax) >= 0 && (
         <>
