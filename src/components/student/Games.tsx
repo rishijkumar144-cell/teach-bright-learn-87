@@ -997,38 +997,41 @@ function JumpingJacksGame({ questions, onExit }: { questions: StudyQA[]; onExit:
     setAirborne(JJ_AIRBORNE_TILES);
   };
 
-  // Auto-advance
+  // Auto-advance using refs to avoid nested-updater issues in StrictMode
+  const posRef = useRef(0);
+  const airRef = useRef(0);
+  useEffect(() => { posRef.current = pos; }, [pos]);
+  useEffect(() => { airRef.current = airborne; }, [airborne]);
   useEffect(() => {
     if (phase !== "play") return;
     const id = setInterval(() => {
-      setPos((p) => {
-        const nextP = p + 1;
-        if (nextP >= track.length) return p;
-        const tile = track[nextP];
-        // Reduce airborne after the step
-        setAirborne((a) => {
-          const nextA = Math.max(0, a - 1);
-          // Evaluate landing/gap AFTER movement using nextA
-          if (tile === "G" && a === 0) {
-            // On ground over a gap → fall
-            setFailedTile(nextP);
-            sfx.wrong();
-            setTimeout(() => setPhase("fail"), 350);
-          } else if (tile === "F") {
-            sfx.correct();
-            setBestLevel((b) => Math.max(b, level));
-            setTimeout(() => {
-              if (level >= JJ_TOTAL_LEVELS) setPhase("won");
-              else setPhase("levelClear");
-            }, 250);
-          }
-          return nextA;
-        });
-        return nextP;
-      });
+      const nextP = posRef.current + 1;
+      if (nextP >= track.length) { clearInterval(id); return; }
+      const tile = track[nextP];
+      const wasAirborne = airRef.current > 0;
+      const nextA = Math.max(0, airRef.current - 1);
+      posRef.current = nextP;
+      airRef.current = nextA;
+      setPos(nextP);
+      setAirborne(nextA);
+      if (tile === "G" && !wasAirborne) {
+        setFailedTile(nextP);
+        sfx.wrong();
+        clearInterval(id);
+        setTimeout(() => setPhase("fail"), 350);
+      } else if (tile === "F") {
+        sfx.correct();
+        setBestLevel((b) => Math.max(b, level));
+        clearInterval(id);
+        setTimeout(() => {
+          if (level >= JJ_TOTAL_LEVELS) setPhase("won");
+          else setPhase("levelClear");
+        }, 250);
+      }
     }, speedMs);
     return () => clearInterval(id);
   }, [phase, track, speedMs, level]);
+
 
   // Space to jump
   useEffect(() => {
