@@ -118,7 +118,9 @@ export type DrawShape =
   | { type: "parabola"; hx: number; hy: number; px: number; py: number }
   | { type: "circle"; cx: number; cy: number; rx: number; ry: number }
   | { type: "ellipse"; cx: number; cy: number; ax: number; ay: number; bx: number; by: number }
-  | { type: "hyperbola"; cx: number; cy: number; ax: number; ay: number; bx: number; by: number };
+  | { type: "hyperbola"; cx: number; cy: number; ax: number; ay: number; bx: number; by: number }
+  | { type: "halfplane"; x1: number; y1: number; x2: number; y2: number; above: boolean; strict?: boolean };
+
 
 // ---------- Interactive ----------
 
