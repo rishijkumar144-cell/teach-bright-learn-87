@@ -111,7 +111,11 @@ export function AccessibilityToolbar() {
           variant="ghost"
           size="icon"
           aria-label="Toggle theme"
-          onClick={() => patch({ theme: prefs.theme === "dark" ? "light" : "dark" })}
+          data-sfx="off"
+          onClick={() => {
+            sfx.toggle();
+            patch({ theme: prefs.theme === "dark" ? "light" : "dark" });
+          }}
           className="h-9 w-9 rounded-full"
         >
           <AnimatePresence mode="wait" initial={false}>
@@ -127,17 +131,25 @@ export function AccessibilityToolbar() {
           </AnimatePresence>
         </Button>
         <div className="h-5 w-px bg-border" />
+        <SoundToggleButton />
+        <div className="h-5 w-px bg-border" />
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => {
+            const next = !open;
+            if (next) sfx.open(); else sfx.close();
+            setOpen(next);
+          }}
           aria-label="Accessibility options"
           aria-expanded={open}
+          data-sfx="off"
           className="h-9 w-9 rounded-full"
         >
           <Accessibility className="h-4 w-4" />
         </Button>
       </div>
+
 
       <AnimatePresence>
         {open && (
