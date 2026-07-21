@@ -994,6 +994,10 @@ const STATIC_KINDS: { kind: StaticKind; label: string; Icon: typeof BarChart3 }[
   { kind: "lineplot", label: "Line plot", Icon: LineIcon },
   { kind: "stemleaf", label: "Stem & leaf", Icon: TableIcon },
   { kind: "coord", label: "Coordinate plane", Icon: Grid3x3 },
+  { kind: "numberline", label: "Number line", Icon: LineIcon },
+  { kind: "grid", label: "Blank grid", Icon: Grid3x3 },
+  { kind: "fraction", label: "Fraction chart", Icon: BarChart3 },
+  { kind: "geometry", label: "Geometry figure", Icon: MapPin },
   { kind: "image", label: "Upload image", Icon: ImageIcon },
 ];
 
@@ -1015,8 +1019,29 @@ function defaultStaticSpec(kind: StaticKind): StaticSpec {
       return { kind: "stemleaf", title: "Stem & leaf", values: [12, 15, 18, 21, 24, 27, 33, 35] };
     case "coord":
       return { kind: "coord", title: "Coordinate plane", xMin: -5, xMax: 5, yMin: -5, yMax: 5, shapes: [] };
+    case "numberline":
+      return { kind: "numberline", title: "Number line", min: 0, max: 10, step: 1, marks: [{ value: 4, label: "A" }], intervals: [] };
+    case "grid":
+      return { kind: "grid", title: "Grid", cols: 10, rows: 8, style: "square", showAxes: false };
+    case "fraction":
+      return { kind: "fraction", title: "Fractions", rows: [{ label: "1/2", parts: 2, shaded: 1 }, { label: "2/4", parts: 4, shaded: 2 }, { label: "3/8", parts: 8, shaded: 3 }] };
+    case "geometry": {
+      const a = newId(), b = newId(), c = newId();
+      return {
+        kind: "geometry",
+        title: "Triangle ABC",
+        points: [
+          { id: a, x: 20, y: 80, label: "A" },
+          { id: b, x: 80, y: 80, label: "B" },
+          { id: c, x: 50, y: 20, label: "C" },
+        ],
+        edges: [{ a, b: b }, { a: b, b: c }, { a: c, b: a }],
+        angles: [],
+      };
+    }
   }
 }
+
 
 function Model2DBlockEditor({
   d,
