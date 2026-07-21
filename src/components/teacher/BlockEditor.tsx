@@ -1681,7 +1681,8 @@ function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onCh
                   onClick={() => onChange({ ...spec, tools: on ? spec.tools.filter((x) => x !== t) : [...spec.tools, t] })}
                   className={cn("rounded-md border px-2 py-1 text-xs capitalize", on ? "border-primary bg-primary/10 text-primary" : "border-border")}
                 >
-                  {t}
+                  {t === "halfplane" ? "shade" : t}
+
                 </button>
               );
             })}
