@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { Bomb, Sparkles, RotateCcw, ChevronLeft, ChevronRight, Trophy, Loader2 } from "lucide-react";
+import { Bomb, Sparkles, RotateCcw, ChevronLeft, ChevronRight, Trophy, Loader2, Rabbit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
