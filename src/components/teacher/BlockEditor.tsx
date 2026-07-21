@@ -1423,11 +1423,13 @@ function StaticStemLeafEditor({ spec, onChange }: { spec: Extract<StaticSpec, { 
 function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "coord" }>; onChange: (s: StaticSpec) => void }) {
   const [tool, setTool] = useState<ToolKind>("point");
   const [scratch, setScratch] = useState<Array<{ x: number; y: number }>>([]);
+  const [shadeAbove, setShadeAbove] = useState(true);
+  const [shadeStrict, setShadeStrict] = useState(false);
 
   const addShape = (s: DrawShape) => onChange({ ...spec, shapes: [...spec.shapes, s] });
 
   const onClick = (x: number, y: number) => {
-    const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3 };
+    const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3, halfplane: 2 };
     const n = [...scratch, { x, y }];
     if (n.length < need[tool]) { setScratch(n); return; }
     setScratch([]);
@@ -1438,6 +1440,7 @@ function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kin
       case "circle": addShape({ type: "circle", cx: n[0].x, cy: n[0].y, rx: n[1].x, ry: n[1].y }); break;
       case "ellipse": addShape({ type: "ellipse", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }); break;
       case "hyperbola": addShape({ type: "hyperbola", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }); break;
+      case "halfplane": addShape({ type: "halfplane", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y, above: shadeAbove, strict: shadeStrict }); break;
     }
   };
 
@@ -1450,23 +1453,38 @@ function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kin
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
-        {(["point", "line", "parabola", "circle", "ellipse", "hyperbola"] as ToolKind[]).map((t) => (
+        {(["point", "line", "parabola", "circle", "ellipse", "hyperbola", "halfplane"] as ToolKind[]).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => { setTool(t); setScratch([]); }}
             className={cn("rounded-md border px-2 py-1 text-xs capitalize", tool === t ? "border-primary bg-primary/10 text-primary" : "border-border")}
           >
-            {t}
+            {t === "halfplane" ? "shade (inequality)" : t}
           </button>
         ))}
         <Button variant="outline" size="sm" onClick={() => { onChange({ ...spec, shapes: [] }); setScratch([]); }}><Trash2 className="h-4 w-4" /> Clear</Button>
       </div>
-      <p className="text-xs text-muted-foreground">Click on the grid to add {tool} ({scratch.length}/{({ point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3 } as Record<ToolKind, number>)[tool]} points).</p>
+      {tool === "halfplane" && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-accent/20 p-2 text-xs">
+          <span className="font-semibold">Shade:</span>
+          <button type="button" onClick={() => setShadeAbove(true)} className={cn("rounded-md border px-2 py-1", shadeAbove ? "border-primary bg-primary/10 text-primary" : "border-border")}>Above / right</button>
+          <button type="button" onClick={() => setShadeAbove(false)} className={cn("rounded-md border px-2 py-1", !shadeAbove ? "border-primary bg-primary/10 text-primary" : "border-border")}>Below / left</button>
+          <span className="ml-2 font-semibold">Boundary:</span>
+          <button type="button" onClick={() => setShadeStrict(false)} className={cn("rounded-md border px-2 py-1", !shadeStrict ? "border-primary bg-primary/10 text-primary" : "border-border")}>Inclusive (≤/≥)</button>
+          <button type="button" onClick={() => setShadeStrict(true)} className={cn("rounded-md border px-2 py-1", shadeStrict ? "border-primary bg-primary/10 text-primary" : "border-border")}>Strict (&lt;/&gt;)</button>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {tool === "halfplane"
+          ? `Click 2 points to define the boundary line, then the ${shadeAbove ? "above/right" : "below/left"} side shades in (${scratch.length}/2).`
+          : `Click on the grid to add ${tool} (${scratch.length}/${({ point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3, halfplane: 2 } as Record<ToolKind, number>)[tool]} points).`}
+      </p>
       <CoordinateGrid xMin={spec.xMin} xMax={spec.xMax} yMin={spec.yMin} yMax={spec.yMax} shapes={spec.shapes} onClick={onClick} />
     </div>
   );
 }
+
 
 // ============================================================
 // Interactive editor
@@ -1654,7 +1672,7 @@ function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onCh
           </div>
           <Label className="text-xs">Tools students can use</Label>
           <div className="flex flex-wrap gap-2">
-            {(["point", "line", "parabola", "circle", "ellipse", "hyperbola"] as ToolKind[]).map((t) => {
+            {(["point", "line", "parabola", "circle", "ellipse", "hyperbola", "halfplane"] as ToolKind[]).map((t) => {
               const on = spec.tools.includes(t);
               return (
                 <button
@@ -1663,7 +1681,8 @@ function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onCh
                   onClick={() => onChange({ ...spec, tools: on ? spec.tools.filter((x) => x !== t) : [...spec.tools, t] })}
                   className={cn("rounded-md border px-2 py-1 text-xs capitalize", on ? "border-primary bg-primary/10 text-primary" : "border-border")}
                 >
-                  {t}
+                  {t === "halfplane" ? "shade" : t}
+
                 </button>
               );
             })}
@@ -1853,6 +1872,27 @@ function StaticNumberLineEditor({ spec, onChange }: { spec: Extract<StaticSpec, 
         ))}
         <Button variant="outline" size="sm" className="mt-1" onClick={() => onChange({ ...spec, intervals: [...spec.intervals, { from: spec.min, to: spec.max }] })}><Plus className="h-4 w-4" /> Interval</Button>
       </div>
+      <div>
+        <Label className="text-xs">Inequality rays (e.g. x &gt; 3 or x ≤ −2)</Label>
+        {(spec.rays ?? []).map((r, i) => {
+          const setRays = (rays: NonNullable<typeof spec.rays>) => onChange({ ...spec, rays });
+          const rays = spec.rays ?? [];
+          return (
+            <div key={i} className="mt-1 flex flex-wrap items-center gap-2">
+              <Input type="number" value={r.at} onChange={(e) => setRays(rays.map((x, k) => k === i ? { ...x, at: Number(e.target.value) } : x))} placeholder="at" className="w-24" />
+              <select className="rounded-md border border-border bg-background px-2 py-1 text-sm" value={r.direction} onChange={(e) => setRays(rays.map((x, k) => k === i ? { ...x, direction: e.target.value as "left" | "right" } : x))}>
+                <option value="right">→ greater than</option>
+                <option value="left">← less than</option>
+              </select>
+              <label className="flex items-center gap-1 text-xs"><Checkbox checked={!!r.closed} onCheckedChange={(v) => setRays(rays.map((x, k) => k === i ? { ...x, closed: !!v } : x))} /> inclusive (≤/≥)</label>
+              <Input value={r.label ?? ""} onChange={(e) => setRays(rays.map((x, k) => k === i ? { ...x, label: e.target.value } : x))} placeholder="label" className="flex-1 min-w-32" />
+              <Button variant="ghost" size="icon" onClick={() => setRays(rays.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="mt-1" onClick={() => onChange({ ...spec, rays: [...(spec.rays ?? []), { at: 0, direction: "right", closed: false }] })}><Plus className="h-4 w-4" /> Ray</Button>
+      </div>
+
       <div className="rounded-lg border border-border bg-background p-2"><NumberLineSvg spec={spec} /></div>
     </div>
   );
@@ -2078,7 +2118,10 @@ function StaticGeometryEditor({ spec, onChange }: { spec: Extract<StaticSpec, { 
                 <Input type="number" min={0} max={3} value={e.parallel ?? 0} className="w-16 h-8" onChange={(ev) => setEdges(spec.edges.map((x, k) => k === i ? { ...x, parallel: Math.max(0, Math.min(3, Number(ev.target.value) || 0)) || undefined } : x))} />
                 <span>Tick marks (congruent)</span>
                 <Input type="number" min={0} max={3} value={e.tick ?? 0} className="w-16 h-8" onChange={(ev) => setEdges(spec.edges.map((x, k) => k === i ? { ...x, tick: Math.max(0, Math.min(3, Number(ev.target.value) || 0)) || undefined } : x))} />
+                <span>Curve</span>
+                <Input type="number" step={5} value={e.curve ?? 0} className="w-20 h-8" onChange={(ev) => setEdges(spec.edges.map((x, k) => k === i ? { ...x, curve: Number(ev.target.value) || undefined } : x))} />
                 <Button variant="ghost" size="icon" onClick={() => setEdges(spec.edges.filter((_, k) => k !== i))}><Trash2 className="h-3 w-3" /></Button>
+
               </div>
             );
           })}

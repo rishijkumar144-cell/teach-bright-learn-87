@@ -370,8 +370,9 @@ export function CoordinateGrid({
     >
       {gridLines}
       {shapes.map((s, i) => (
-        <ShapeSvg key={i} shape={s} sx={sx} sy={sy} />
+        <ShapeSvg key={i} shape={s} sx={sx} sy={sy} vw={W} vh={H} />
       ))}
+
       {/* axis tick labels */}
       {Math.ceil(xMin) <= 0 && Math.floor(xMax) >= 0 && (
         <>
@@ -391,11 +392,16 @@ function ShapeSvg({
   shape,
   sx,
   sy,
+  vw,
+  vh,
 }: {
   shape: DrawShape;
   sx: (x: number) => number;
   sy: (y: number) => number;
+  vw: number;
+  vh: number;
 }) {
+
   const stroke = "var(--primary)";
   switch (shape.type) {
     case "point":
@@ -477,8 +483,103 @@ function ShapeSvg({
         </g>
       );
     }
+    case "halfplane": {
+      // Work entirely in svg-pixel space, clipping the viewport rectangle
+      // by the half-plane defined by the boundary line.
+      const p1 = { x: sx(shape.x1), y: sy(shape.y1) };
+      const p2 = { x: sx(shape.x2), y: sy(shape.y2) };
+      const dxp = p2.x - p1.x;
+      const dyp = p2.y - p1.y;
+      // Pick a reference point that is on the "shaded" side in MATH coords,
+      // then convert its side test into svg space via the same sx/sy.
+      const midX = (shape.x1 + shape.x2) / 2;
+      const midY = (shape.y1 + shape.y2) / 2;
+      // Move perpendicular to the line in math space, in the "above" direction.
+      // For non-vertical line: above = larger y.
+      // For vertical line (dx ~ 0): above = larger x (right side).
+      const isVertical = Math.abs(shape.x2 - shape.x1) < 1e-9;
+      const refMath = isVertical
+        ? { x: midX + (shape.above ? 1 : -1), y: midY }
+        : { x: midX, y: midY + (shape.above ? 1 : -1) };
+      const ref = { x: sx(refMath.x), y: sy(refMath.y) };
+      // Signed distance from ref to line p1-p2 in svg space
+      const sign = (q: { x: number; y: number }) =>
+        (q.x - p1.x) * dyp - (q.y - p1.y) * dxp;
+      const targetSign = Math.sign(sign(ref)) || 1;
+      // Sutherland-Hodgman clip of viewport by half-plane (sign * s >= 0).
+      const rect: { x: number; y: number }[] = [
+        { x: 0, y: 0 },
+        { x: vw, y: 0 },
+        { x: vw, y: vh },
+        { x: 0, y: vh },
+      ];
+      const inside = (q: { x: number; y: number }) => sign(q) * targetSign >= 0;
+      const intersect = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+        const sa = sign(a), sb = sign(b);
+        const t = sa / (sa - sb);
+        return { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
+      };
+      let out = rect;
+      const input = out;
+      const clipped: { x: number; y: number }[] = [];
+      for (let i = 0; i < input.length; i++) {
+        const cur = input[i];
+        const prev = input[(i + input.length - 1) % input.length];
+        const curIn = inside(cur);
+        const prevIn = inside(prev);
+        if (curIn) {
+          if (!prevIn) clipped.push(intersect(prev, cur));
+          clipped.push(cur);
+        } else if (prevIn) {
+          clipped.push(intersect(prev, cur));
+        }
+      }
+      out = clipped;
+      const pts = out.map((p) => `${p.x},${p.y}`).join(" ");
+      // Boundary line — extend across viewport in svg space
+      // Parametric: p1 + t * (p2 - p1). Solve where it enters/leaves viewport.
+      const ts: number[] = [];
+      if (Math.abs(dxp) > 1e-9) {
+        ts.push((0 - p1.x) / dxp);
+        ts.push((vw - p1.x) / dxp);
+      }
+      if (Math.abs(dyp) > 1e-9) {
+        ts.push((0 - p1.y) / dyp);
+        ts.push((vh - p1.y) / dyp);
+      }
+      const eps = 1e-6;
+      const valid = ts.filter((t) => {
+        const x = p1.x + t * dxp, y = p1.y + t * dyp;
+        return x >= -eps && x <= vw + eps && y >= -eps && y <= vh + eps;
+      });
+      let bx1 = p1.x, by1 = p1.y, bx2 = p2.x, by2 = p2.y;
+      if (valid.length >= 2) {
+        const tmin = Math.min(...valid);
+        const tmax = Math.max(...valid);
+        bx1 = p1.x + tmin * dxp; by1 = p1.y + tmin * dyp;
+        bx2 = p1.x + tmax * dxp; by2 = p1.y + tmax * dyp;
+      }
+      return (
+        <g>
+          {out.length >= 3 && (
+            <polygon points={pts} fill={stroke} fillOpacity={0.18} stroke="none" />
+          )}
+          <line
+            x1={bx1}
+            y1={by1}
+            x2={bx2}
+            y2={by2}
+            stroke={stroke}
+            strokeWidth={2}
+            strokeDasharray={shape.strict ? "5 4" : undefined}
+          />
+        </g>
+      );
+    }
+
   }
 }
+
 
 function CoordChart({ spec }: { spec: Extract<StaticSpec, { kind: "coord" }> }) {
   return (
@@ -618,12 +719,24 @@ export function NumberLineSvg({ spec }: { spec: Extract<StaticSpec, { kind: "num
           </g>
         );
       })}
+      {(spec.rays ?? []).map((r, i) => {
+        const start = sx(r.at);
+        const end = r.direction === "right" ? W - PAD + 8 : PAD - 8;
+        return (
+          <g key={`ray${i}`} className="text-[var(--primary)]">
+            <line x1={start} y1={y} x2={end} y2={y} stroke="currentColor" strokeWidth={4} markerEnd="url(#nl-arrow)" />
+            <circle cx={start} cy={y} r={5} fill={r.closed ? "currentColor" : "var(--background)"} stroke="currentColor" strokeWidth={2} />
+            {r.label && <text x={start + (r.direction === "right" ? 12 : -12)} y={y - 12} textAnchor={r.direction === "right" ? "start" : "end"} className="fill-current text-[10px] font-semibold">{r.label}</text>}
+          </g>
+        );
+      })}
       {spec.marks.map((m, i) => (
         <g key={`mk${i}`} className="text-[var(--primary)]">
           <circle cx={sx(m.value)} cy={y} r={5} fill="currentColor" />
           {m.label && <text x={sx(m.value)} y={y - 12} textAnchor="middle" className="fill-current text-[10px] font-semibold">{m.label}</text>}
         </g>
       ))}
+
     </svg>
   );
 }
@@ -773,33 +886,41 @@ export function EdgeSvg({ a, b, edge, sx, sy }: { a: GeoPoint; b: GeoPoint; edge
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len, uy = dy / len;
   const nx = -uy, ny = ux;
+  // curve control point offset perpendicular from midpoint
+  const bulge = edge.curve ?? 0;
+  const cx = mx + nx * bulge;
+  const cy = my + ny * bulge;
   const marks: React.ReactNode[] = [];
   if (edge.parallel) {
     const count = edge.parallel;
     for (let k = 0; k < count; k++) {
       const off = (k - (count - 1) / 2) * 5;
-      const cx = mx + ux * off, cy = my + uy * off;
-      // arrow-head shape
-      const p1x = cx + ux * -4 + nx * 4, p1y = cy + uy * -4 + ny * 4;
-      const p2x = cx + ux * -4 - nx * 4, p2y = cy + uy * -4 - ny * 4;
-      marks.push(<polyline key={`p${k}`} points={`${p1x},${p1y} ${cx},${cy} ${p2x},${p2y}`} fill="none" stroke="var(--primary)" strokeWidth={2} />);
+      const px = (bulge ? cx : mx) + ux * off, py = (bulge ? cy : my) + uy * off;
+      const p1x = px + ux * -4 + nx * 4, p1y = py + uy * -4 + ny * 4;
+      const p2x = px + ux * -4 - nx * 4, p2y = py + uy * -4 - ny * 4;
+      marks.push(<polyline key={`p${k}`} points={`${p1x},${p1y} ${px},${py} ${p2x},${p2y}`} fill="none" stroke="var(--primary)" strokeWidth={2} />);
     }
   }
   if (edge.tick) {
     const count = edge.tick;
     for (let k = 0; k < count; k++) {
       const off = (k - (count - 1) / 2) * 5;
-      const cx = mx + ux * off, cy = my + uy * off;
-      marks.push(<line key={`t${k}`} x1={cx + nx * 6} y1={cy + ny * 6} x2={cx - nx * 6} y2={cy - ny * 6} stroke="var(--primary)" strokeWidth={2} />);
+      const px = (bulge ? cx : mx) + ux * off, py = (bulge ? cy : my) + uy * off;
+      marks.push(<line key={`t${k}`} x1={px + nx * 6} y1={py + ny * 6} x2={px - nx * 6} y2={py - ny * 6} stroke="var(--primary)" strokeWidth={2} />);
     }
   }
   return (
     <g>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth={2} />
+      {bulge ? (
+        <path d={`M${x1},${y1} Q${cx},${cy} ${x2},${y2}`} fill="none" stroke="currentColor" strokeWidth={2} />
+      ) : (
+        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth={2} />
+      )}
       {marks}
     </g>
   );
 }
+
 
 export function AngleSvg({ vertex, from, to, angle, sx, sy }: { vertex: GeoPoint; from: GeoPoint; to: GeoPoint; angle: GeoAngle; sx: (n: number) => number; sy: (n: number) => number }) {
   const vx = sx(vertex.x), vy = sy(vertex.y);
