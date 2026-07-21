@@ -148,6 +148,7 @@ export function LessonPlayer({
       return;
     }
     setDone(true);
+    sfx.complete();
     if (!reviewMode) onFinish?.({ studentName: name, studentEmail: email, answers });
   };
 
