@@ -16,6 +16,7 @@ import { InteractiveRunner } from "./InteractiveRunner";
 import type { InteractiveSpec, StaticSpec } from "@/lib/charts";
 import { interactiveComplete } from "@/lib/charts";
 import { cn } from "@/lib/utils";
+import { sfx } from "@/lib/sfx";
 
 const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
 const SUBMITTABLE_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
