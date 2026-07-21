@@ -279,6 +279,30 @@ function SubmissionDetail({
         .join(", ");
     }
     if (b.type === "truefalse") return ans ? "True" : "False";
+    if (b.type === "upload" && typeof ans === "object" && ans !== null) {
+      const v = ans as { name?: string; type?: string; size?: number; data?: string };
+      return (
+        <div className="mt-2 rounded-lg border border-border bg-background p-3">
+          <div className="text-sm font-semibold">{v.name || "Uploaded file"}</div>
+          <div className="text-xs text-muted-foreground">
+            {v.type || "file"}
+            {typeof v.size === "number" ? ` · ${(v.size / 1024).toFixed(1)} KB` : ""}
+          </div>
+          {v.data && v.type?.startsWith("image/") && (
+            <img src={v.data} alt={v.name || "upload"} className="mt-2 max-h-72 rounded-md" />
+          )}
+          {v.data && (
+            <a
+              href={v.data}
+              download={v.name || "submission"}
+              className="mt-2 inline-flex items-center rounded-md border border-border bg-accent/30 px-3 py-1.5 text-xs font-semibold hover:bg-accent"
+            >
+              Download file
+            </a>
+          )}
+        </div>
+      );
+    }
     if (typeof ans === "object") {
       return (
         <pre className="mt-1 whitespace-pre-wrap rounded-lg bg-accent/40 p-2 text-xs">

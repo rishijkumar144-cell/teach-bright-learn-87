@@ -32,6 +32,7 @@ import {
   Table as TableIcon,
   Grid3x3,
   MapPin,
+  FileUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,8 @@ import {
   NumberLineSvg,
   FractionRows,
   GeometrySvg,
+  EdgeSvg,
+  AngleSvg,
 } from "./Charts";
 
 interface BlockDef {
@@ -110,6 +113,7 @@ export const BLOCK_DEFS: BlockDef[] = [
   { type: "reflection", label: "Reflection", icon: MessageCircleQuestion, group: "content", init: () => ({ question: "What was the trickiest part for you?" }) },
   { type: "model2d", label: "2D Diagram", icon: BarChart3, group: "interactive", init: () => ({ spec: { kind: "bar", title: "New chart", categories: [{ label: "A", value: 3 }, { label: "B", value: 5 }, { label: "C", value: 2 }], max: 10, unit: "" } as StaticSpec, caption: "" }) },
   { type: "interactive", label: "Interactive Diagram", icon: Grid3x3, group: "interactive", init: () => ({ spec: { kind: "bar", title: "Match the targets", instructions: "Drag each bar to match its target.", unit: "", max: 10, tolerance: 0, categories: [{ label: "A", target: 4 }, { label: "B", target: 7 }] } as InteractiveSpec, required: true }) },
+  { type: "upload", label: "File Upload", icon: FileUp, group: "question", init: () => ({ prompt: "Upload your work as a PDF or image.", accept: "image/*,application/pdf", maxSizeMB: 8, required: false, points: 0 }) },
 ];
 
 export function BlockPalette({ onAdd }: { onAdd: (type: BlockType) => void }) {
@@ -779,6 +783,12 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (d: Record<s
           <InteractiveBlockEditor d={d} onChange={onChange} />
         </BlockShell>
       );
+    case "upload":
+      return (
+        <BlockShell icon={def.icon} label={def.label}>
+          <UploadBlockEditor d={d} onChange={onChange} />
+        </BlockShell>
+      );
   }
 }
 
@@ -1134,19 +1144,147 @@ function TitleField({ value, onChange }: { value: string; onChange: (v: string) 
 
 function StaticImageEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "image" }>; onChange: (s: StaticSpec) => void }) {
   const ref = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const labels = spec.labels ?? [];
+  const setLabels = (next: typeof labels) => onChange({ ...spec, labels: next });
+
   const upload = (f: File) => {
     if (f.size > 4 * 1024 * 1024) return toast.error("Image must be under 4MB");
     const r = new FileReader();
     r.onload = () => onChange({ ...spec, url: String(r.result) });
     r.readAsDataURL(f);
   };
+
+  const onImgClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    const img = imgRef.current;
+    if (!img) return;
+    const rect = img.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    setLabels([...labels, { id: newId(), x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, text: `Label ${labels.length + 1}` }]);
+  };
+
   return (
     <div className="space-y-2">
       <Input value={spec.url} onChange={(e) => onChange({ ...spec, url: e.target.value })} placeholder="Image URL or upload" />
       <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
-      <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()}>
-        <Upload className="h-4 w-4" /> Upload
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()}>
+          <Upload className="h-4 w-4" /> Upload
+        </Button>
+        <Input
+          value={spec.caption ?? ""}
+          onChange={(e) => onChange({ ...spec, caption: e.target.value })}
+          placeholder="Optional caption"
+          className="flex-1 min-w-40"
+        />
+      </div>
+      {spec.url && (
+        <>
+          <div className="rounded-xl border border-border bg-background p-2">
+            <p className="mb-2 text-xs text-muted-foreground">
+              <MapPin className="mr-1 inline h-3 w-3" /> Click the image to drop a label pin.
+            </p>
+            <div className="relative">
+              <img
+                ref={imgRef}
+                src={spec.url}
+                alt={spec.caption || ""}
+                onClick={onImgClick}
+                className="w-full cursor-crosshair select-none rounded-lg"
+                draggable={false}
+              />
+              {labels.map((p, i) => (
+                <div
+                  key={p.id}
+                  className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                >
+                  <div className="flex items-center gap-1">
+                    <span className="grid h-5 w-5 place-items-center rounded-full border-2 border-background bg-primary text-[10px] font-bold text-primary-foreground shadow">
+                      {i + 1}
+                    </span>
+                    {p.text && (
+                      <span className="whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-xs font-semibold shadow ring-1 ring-border">
+                        {p.text}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {labels.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs">Labels</Label>
+              {labels.map((p, i) => (
+                <div key={p.id} className="flex items-center gap-2 rounded-md border border-border p-1.5 text-xs">
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{i + 1}</span>
+                  <Input
+                    value={p.text}
+                    onChange={(e) => setLabels(labels.map((x, k) => (k === i ? { ...x, text: e.target.value } : x)))}
+                    className="h-8 flex-1"
+                    placeholder="Label text"
+                  />
+                  <Button variant="ghost" size="icon" onClick={() => setLabels(labels.filter((_, k) => k !== i))}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function UploadBlockEditor({
+  d,
+  onChange,
+}: {
+  d: Record<string, unknown>;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-xs">Prompt to student</Label>
+        <Textarea
+          rows={2}
+          value={(d.prompt as string) ?? ""}
+          onChange={(e) => onChange({ prompt: e.target.value })}
+          placeholder="Describe exactly what the student should upload."
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Accepted file types</Label>
+          <Input
+            value={(d.accept as string) ?? ""}
+            onChange={(e) => onChange({ accept: e.target.value })}
+            placeholder="image/*,application/pdf"
+          />
+          <p className="mt-1 text-[10px] text-muted-foreground">Comma-separated MIME types or extensions (e.g. .pdf, image/*).</p>
+        </div>
+        <div>
+          <Label className="text-xs">Max size (MB)</Label>
+          <Input
+            type="number"
+            min={1}
+            max={20}
+            value={Number(d.maxSizeMB ?? 8)}
+            onChange={(e) => onChange({ maxSizeMB: Math.max(1, Math.min(20, Number(e.target.value) || 8)) })}
+          />
+        </div>
+      </div>
+      <div className="flex items-center justify-between rounded-xl border border-border/70 bg-accent/30 p-3">
+        <div>
+          <div className="text-sm font-medium">Required</div>
+          <p className="text-xs text-muted-foreground">Student must upload a file before moving on.</p>
+        </div>
+        <Switch checked={!!d.required} onCheckedChange={(v) => onChange({ required: v })} />
+      </div>
     </div>
   );
 }
@@ -1888,13 +2026,13 @@ function StaticGeometryEditor({ spec, onChange }: { spec: Extract<StaticSpec, { 
         {spec.edges.map((e, i) => {
           const a = byId.get(e.a), b = byId.get(e.b);
           if (!a || !b) return null;
-          return (
-            <g key={i}>
-              <line x1={sx(a.x)} y1={sy(a.y)} x2={sx(b.x)} y2={sy(b.y)} stroke="var(--foreground)" strokeWidth={2} />
-            </g>
-          );
+          return <EdgeSvg key={`e${i}`} a={a} b={b} edge={e} sx={sx} sy={sy} />;
         })}
-        {/* re-render with markers via reusing GeometrySvg's helpers would double-draw; keep this simple and let the preview below show full styling */}
+        {spec.angles.map((ang, i) => {
+          const at = byId.get(ang.at), from = byId.get(ang.from), to = byId.get(ang.to);
+          if (!at || !from || !to) return null;
+          return <AngleSvg key={`a${i}`} vertex={at} from={from} to={to} angle={ang} sx={sx} sy={sy} />;
+        })}
         {spec.points.map((p) => (
           <g
             key={p.id}
