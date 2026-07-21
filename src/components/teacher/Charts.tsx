@@ -34,6 +34,14 @@ export function StaticChart({ spec }: { spec: StaticSpec }) {
       return <StemLeaf spec={spec} />;
     case "coord":
       return <CoordChart spec={spec} />;
+    case "numberline":
+      return <NumberLineChart spec={spec} />;
+    case "grid":
+      return <BlankGrid spec={spec} />;
+    case "fraction":
+      return <FractionChart spec={spec} />;
+    case "geometry":
+      return <GeometryChart spec={spec} />;
   }
 }
 
