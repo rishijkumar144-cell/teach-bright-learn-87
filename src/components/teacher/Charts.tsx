@@ -1,4 +1,4 @@
-import type { DrawShape, StaticSpec } from "@/lib/charts";
+import type { DrawShape, GeoAngle, GeoEdge, GeoPoint, StaticSpec } from "@/lib/charts";
 import { SLICE_COLORS } from "@/lib/charts";
 
 const CHART_STROKE = "currentColor";
