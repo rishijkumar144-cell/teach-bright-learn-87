@@ -13,6 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "../lib/store";
 import { AccessibilityProvider, AccessibilityToolbar } from "@/components/AccessibilityToolbar";
+import { installGlobalClickSfx, sfx } from "@/lib/sfx";
+import { toast } from "sonner";
 
 import { Toaster } from "@/components/ui/sonner";
 
@@ -132,6 +134,24 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    installGlobalClickSfx();
+    const origSuccess = toast.success;
+    const origError = toast.error;
+    toast.success = ((...args: Parameters<typeof origSuccess>) => {
+      sfx.success();
+      return origSuccess(...args);
+    }) as typeof toast.success;
+    toast.error = ((...args: Parameters<typeof origError>) => {
+      sfx.error();
+      return origError(...args);
+    }) as typeof toast.error;
+    return () => {
+      toast.success = origSuccess;
+      toast.error = origError;
+    };
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

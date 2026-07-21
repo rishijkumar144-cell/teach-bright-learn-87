@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { generateGameQuestions } from "@/lib/ai.functions";
 import { ParagraphWithMath } from "@/components/teacher/BlockEditor";
+import { sfx } from "@/lib/sfx";
 
 export interface StudyQA {
   q: string;
@@ -649,6 +650,7 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
       return inNorm === a || (a.includes(inNorm) && inNorm.length >= 3);
     });
     if (isCorrect) {
+      sfx.correct();
       setBombs((b) => b + 1);
       setStreak((s) => {
         const ns = s + 1;
@@ -663,6 +665,7 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
         inputRef.current?.focus();
       }, 500);
     } else {
+      sfx.wrong();
       setStreak(0);
       setFeedback("wrong");
       setLockUntil(Date.now() + WRONG_LOCK_MS);

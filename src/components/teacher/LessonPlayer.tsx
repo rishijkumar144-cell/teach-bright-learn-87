@@ -16,6 +16,7 @@ import { InteractiveRunner } from "./InteractiveRunner";
 import type { InteractiveSpec, StaticSpec } from "@/lib/charts";
 import { interactiveComplete } from "@/lib/charts";
 import { cn } from "@/lib/utils";
+import { sfx } from "@/lib/sfx";
 
 const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
 const SUBMITTABLE_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
@@ -147,6 +148,7 @@ export function LessonPlayer({
       return;
     }
     setDone(true);
+    sfx.complete();
     if (!reviewMode) onFinish?.({ studentName: name, studentEmail: email, answers });
   };
 
@@ -158,6 +160,7 @@ export function LessonPlayer({
         return;
       }
     }
+    sfx.submit();
     setSubmitted((s) => ({ ...s, [b.id]: true }));
   };
 
