@@ -837,33 +837,41 @@ export function EdgeSvg({ a, b, edge, sx, sy }: { a: GeoPoint; b: GeoPoint; edge
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len, uy = dy / len;
   const nx = -uy, ny = ux;
+  // curve control point offset perpendicular from midpoint
+  const bulge = edge.curve ?? 0;
+  const cx = mx + nx * bulge;
+  const cy = my + ny * bulge;
   const marks: React.ReactNode[] = [];
   if (edge.parallel) {
     const count = edge.parallel;
     for (let k = 0; k < count; k++) {
       const off = (k - (count - 1) / 2) * 5;
-      const cx = mx + ux * off, cy = my + uy * off;
-      // arrow-head shape
-      const p1x = cx + ux * -4 + nx * 4, p1y = cy + uy * -4 + ny * 4;
-      const p2x = cx + ux * -4 - nx * 4, p2y = cy + uy * -4 - ny * 4;
-      marks.push(<polyline key={`p${k}`} points={`${p1x},${p1y} ${cx},${cy} ${p2x},${p2y}`} fill="none" stroke="var(--primary)" strokeWidth={2} />);
+      const px = (bulge ? cx : mx) + ux * off, py = (bulge ? cy : my) + uy * off;
+      const p1x = px + ux * -4 + nx * 4, p1y = py + uy * -4 + ny * 4;
+      const p2x = px + ux * -4 - nx * 4, p2y = py + uy * -4 - ny * 4;
+      marks.push(<polyline key={`p${k}`} points={`${p1x},${p1y} ${px},${py} ${p2x},${p2y}`} fill="none" stroke="var(--primary)" strokeWidth={2} />);
     }
   }
   if (edge.tick) {
     const count = edge.tick;
     for (let k = 0; k < count; k++) {
       const off = (k - (count - 1) / 2) * 5;
-      const cx = mx + ux * off, cy = my + uy * off;
-      marks.push(<line key={`t${k}`} x1={cx + nx * 6} y1={cy + ny * 6} x2={cx - nx * 6} y2={cy - ny * 6} stroke="var(--primary)" strokeWidth={2} />);
+      const px = (bulge ? cx : mx) + ux * off, py = (bulge ? cy : my) + uy * off;
+      marks.push(<line key={`t${k}`} x1={px + nx * 6} y1={py + ny * 6} x2={px - nx * 6} y2={py - ny * 6} stroke="var(--primary)" strokeWidth={2} />);
     }
   }
   return (
     <g>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth={2} />
+      {bulge ? (
+        <path d={`M${x1},${y1} Q${cx},${cy} ${x2},${y2}`} fill="none" stroke="currentColor" strokeWidth={2} />
+      ) : (
+        <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth={2} />
+      )}
       {marks}
     </g>
   );
 }
+
 
 export function AngleSvg({ vertex, from, to, angle, sx, sy }: { vertex: GeoPoint; from: GeoPoint; to: GeoPoint; angle: GeoAngle; sx: (n: number) => number; sy: (n: number) => number }) {
   const vx = sx(vertex.x), vy = sy(vertex.y);
