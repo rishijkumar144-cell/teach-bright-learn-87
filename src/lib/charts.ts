@@ -46,7 +46,58 @@ export type StaticSpec =
       yMin: number;
       yMax: number;
       shapes: DrawShape[];
+    }
+  | {
+      kind: "numberline";
+      title: string;
+      min: number;
+      max: number;
+      step: number;
+      marks: { value: number; label?: string }[];
+      intervals: { from: number; to: number; label?: string; closedLeft?: boolean; closedRight?: boolean }[];
+    }
+  | {
+      kind: "grid";
+      title: string;
+      cols: number;
+      rows: number;
+      style: "square" | "dot" | "isometric";
+      showAxes?: boolean;
+    }
+  | {
+      kind: "fraction";
+      title: string;
+      rows: { label?: string; parts: number; shaded: number }[];
+    }
+  | {
+      kind: "geometry";
+      title: string;
+      points: GeoPoint[];
+      edges: GeoEdge[];
+      angles: GeoAngle[];
     };
+
+export interface GeoPoint {
+  id: string;
+  x: number;
+  y: number;
+  label?: string;
+}
+
+export interface GeoEdge {
+  a: string;
+  b: string;
+  parallel?: number;
+  tick?: number;
+}
+
+export interface GeoAngle {
+  at: string;
+  from: string;
+  to: string;
+  label?: string;
+  right?: boolean;
+}
 
 export type StaticKind = StaticSpec["kind"];
 
