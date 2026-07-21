@@ -991,11 +991,13 @@ function JumpingJacksGame({ questions, onExit }: { questions: StudyQA[]; onExit:
   const jump = () => {
     if (phase !== "play") return;
     if (jumps <= 0) return;
-    if (airborne > 0) return;
+    if (airRef.current > 0) return;
     sfx.correct();
     setJumps((j) => j - 1);
+    airRef.current = JJ_AIRBORNE_TILES;
     setAirborne(JJ_AIRBORNE_TILES);
   };
+
 
   // Auto-advance using refs to avoid nested-updater issues in StrictMode
   const posRef = useRef(0);
