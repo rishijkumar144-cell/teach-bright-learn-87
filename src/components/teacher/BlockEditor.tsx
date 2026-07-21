@@ -2097,7 +2097,10 @@ function StaticGeometryEditor({ spec, onChange }: { spec: Extract<StaticSpec, { 
                 <Input type="number" min={0} max={3} value={e.parallel ?? 0} className="w-16 h-8" onChange={(ev) => setEdges(spec.edges.map((x, k) => k === i ? { ...x, parallel: Math.max(0, Math.min(3, Number(ev.target.value) || 0)) || undefined } : x))} />
                 <span>Tick marks (congruent)</span>
                 <Input type="number" min={0} max={3} value={e.tick ?? 0} className="w-16 h-8" onChange={(ev) => setEdges(spec.edges.map((x, k) => k === i ? { ...x, tick: Math.max(0, Math.min(3, Number(ev.target.value) || 0)) || undefined } : x))} />
+                <span>Curve</span>
+                <Input type="number" step={5} value={e.curve ?? 0} className="w-20 h-8" onChange={(ev) => setEdges(spec.edges.map((x, k) => k === i ? { ...x, curve: Number(ev.target.value) || undefined } : x))} />
                 <Button variant="ghost" size="icon" onClick={() => setEdges(spec.edges.filter((_, k) => k !== i))}><Trash2 className="h-3 w-3" /></Button>
+
               </div>
             );
           })}
