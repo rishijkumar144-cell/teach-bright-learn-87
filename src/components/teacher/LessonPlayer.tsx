@@ -612,6 +612,70 @@ function BlockRender({
           />
         </QuestionCard>
       );
+    case "upload": {
+      const v = value as { name?: string; type?: string; size?: number; data?: string } | undefined;
+      const accept = (d.accept as string) || "";
+      const maxMB = Number(d.maxSizeMB ?? 8) || 8;
+      return (
+        <QuestionCard
+          question={d.prompt || "Upload a file"}
+          required={d.required}
+          isMissing={isMissing}
+          submitted={submitted}
+          revealed={revealed}
+          onSubmit={onSubmit}
+          canSubmit={hasAnswer(block, value)}
+          submitLabel="Submit file"
+          footer={
+            <p className="mt-2 text-xs text-muted-foreground">
+              File upload · your teacher will review this submission.
+            </p>
+          }
+        >
+          <div className="space-y-2">
+            <input
+              type="file"
+              accept={accept}
+              disabled={submitted}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                if (f.size > maxMB * 1024 * 1024) {
+                  toast.error(`File must be under ${maxMB}MB`);
+                  e.target.value = "";
+                  return;
+                }
+                const reader = new FileReader();
+                reader.onload = () =>
+                  onChange({
+                    name: f.name,
+                    type: f.type,
+                    size: f.size,
+                    data: String(reader.result),
+                  });
+                reader.readAsDataURL(f);
+              }}
+              className="block w-full rounded-lg border border-border bg-background p-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-primary-foreground"
+            />
+            {v?.data && (
+              <div className="rounded-lg border border-border bg-accent/30 p-3 text-sm">
+                <div className="font-semibold">{v.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {v.type || "file"}
+                  {typeof v.size === "number" ? ` · ${(v.size / 1024).toFixed(1)} KB` : ""}
+                </div>
+                {v.type?.startsWith("image/") && (
+                  <img src={v.data} alt={v.name} className="mt-2 max-h-64 rounded-md" />
+                )}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Accepted: {accept || "any file"} · Max {maxMB}MB
+            </p>
+          </div>
+        </QuestionCard>
+      );
+    }
     case "numeric":
       return (
         <QuestionCard
