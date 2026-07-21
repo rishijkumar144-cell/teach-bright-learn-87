@@ -135,6 +135,24 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    installGlobalClickSfx();
+    const origSuccess = toast.success;
+    const origError = toast.error;
+    toast.success = ((...args: Parameters<typeof origSuccess>) => {
+      sfx.success();
+      return origSuccess(...args);
+    }) as typeof toast.success;
+    toast.error = ((...args: Parameters<typeof origError>) => {
+      sfx.error();
+      return origError(...args);
+    }) as typeof toast.error;
+    return () => {
+      toast.success = origSuccess;
+      toast.error = origError;
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AccessibilityProvider>
