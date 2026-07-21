@@ -65,6 +65,9 @@ import { MathPreview } from "./MathPreview";
 import { EquationEditor } from "./EquationEditor";
 import type {
   DrawShape,
+  GeoAngle,
+  GeoEdge,
+  GeoPoint,
   InteractiveSpec,
   StaticKind,
   StaticSpec,
@@ -76,6 +79,9 @@ import {
   InteractiveBarPreview,
   InteractivePieVisual,
   CoordinateGrid,
+  NumberLineSvg,
+  FractionRows,
+  GeometrySvg,
 } from "./Charts";
 
 interface BlockDef {
