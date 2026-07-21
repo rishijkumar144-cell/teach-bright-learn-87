@@ -1872,6 +1872,27 @@ function StaticNumberLineEditor({ spec, onChange }: { spec: Extract<StaticSpec, 
         ))}
         <Button variant="outline" size="sm" className="mt-1" onClick={() => onChange({ ...spec, intervals: [...spec.intervals, { from: spec.min, to: spec.max }] })}><Plus className="h-4 w-4" /> Interval</Button>
       </div>
+      <div>
+        <Label className="text-xs">Inequality rays (e.g. x &gt; 3 or x ≤ −2)</Label>
+        {(spec.rays ?? []).map((r, i) => {
+          const setRays = (rays: NonNullable<typeof spec.rays>) => onChange({ ...spec, rays });
+          const rays = spec.rays ?? [];
+          return (
+            <div key={i} className="mt-1 flex flex-wrap items-center gap-2">
+              <Input type="number" value={r.at} onChange={(e) => setRays(rays.map((x, k) => k === i ? { ...x, at: Number(e.target.value) } : x))} placeholder="at" className="w-24" />
+              <select className="rounded-md border border-border bg-background px-2 py-1 text-sm" value={r.direction} onChange={(e) => setRays(rays.map((x, k) => k === i ? { ...x, direction: e.target.value as "left" | "right" } : x))}>
+                <option value="right">→ greater than</option>
+                <option value="left">← less than</option>
+              </select>
+              <label className="flex items-center gap-1 text-xs"><Checkbox checked={!!r.closed} onCheckedChange={(v) => setRays(rays.map((x, k) => k === i ? { ...x, closed: !!v } : x))} /> inclusive (≤/≥)</label>
+              <Input value={r.label ?? ""} onChange={(e) => setRays(rays.map((x, k) => k === i ? { ...x, label: e.target.value } : x))} placeholder="label" className="flex-1 min-w-32" />
+              <Button variant="ghost" size="icon" onClick={() => setRays(rays.filter((_, k) => k !== i))}><Trash2 className="h-4 w-4" /></Button>
+            </div>
+          );
+        })}
+        <Button variant="outline" size="sm" className="mt-1" onClick={() => onChange({ ...spec, rays: [...(spec.rays ?? []), { at: 0, direction: "right", closed: false }] })}><Plus className="h-4 w-4" /> Ray</Button>
+      </div>
+
       <div className="rounded-lg border border-border bg-background p-2"><NumberLineSvg spec={spec} /></div>
     </div>
   );
