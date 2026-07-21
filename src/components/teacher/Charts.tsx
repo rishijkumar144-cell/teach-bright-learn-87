@@ -682,12 +682,24 @@ export function NumberLineSvg({ spec }: { spec: Extract<StaticSpec, { kind: "num
           </g>
         );
       })}
+      {(spec.rays ?? []).map((r, i) => {
+        const start = sx(r.at);
+        const end = r.direction === "right" ? W - PAD + 8 : PAD - 8;
+        return (
+          <g key={`ray${i}`} className="text-[var(--primary)]">
+            <line x1={start} y1={y} x2={end} y2={y} stroke="currentColor" strokeWidth={4} markerEnd="url(#nl-arrow)" />
+            <circle cx={start} cy={y} r={5} fill={r.closed ? "currentColor" : "var(--background)"} stroke="currentColor" strokeWidth={2} />
+            {r.label && <text x={start + (r.direction === "right" ? 12 : -12)} y={y - 12} textAnchor={r.direction === "right" ? "start" : "end"} className="fill-current text-[10px] font-semibold">{r.label}</text>}
+          </g>
+        );
+      })}
       {spec.marks.map((m, i) => (
         <g key={`mk${i}`} className="text-[var(--primary)]">
           <circle cx={sx(m.value)} cy={y} r={5} fill="currentColor" />
           {m.label && <text x={sx(m.value)} y={y - 12} textAnchor="middle" className="fill-current text-[10px] font-semibold">{m.label}</text>}
         </g>
       ))}
+
     </svg>
   );
 }
