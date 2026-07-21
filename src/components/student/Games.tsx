@@ -21,7 +21,7 @@ interface GamePickerProps {
   seedQuestions?: StudyQA[];
 }
 
-type GameKind = "flashcards" | "memory" | "bomb";
+type GameKind = "flashcards" | "memory" | "bomb" | "jumping";
 
 export function GamesHub({ seedQuestions }: GamePickerProps) {
   const [topic, setTopic] = useState("");
