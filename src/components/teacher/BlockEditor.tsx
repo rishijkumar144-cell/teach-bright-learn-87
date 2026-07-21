@@ -1672,7 +1672,7 @@ function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onCh
           </div>
           <Label className="text-xs">Tools students can use</Label>
           <div className="flex flex-wrap gap-2">
-            {(["point", "line", "parabola", "circle", "ellipse", "hyperbola"] as ToolKind[]).map((t) => {
+            {(["point", "line", "parabola", "circle", "ellipse", "hyperbola", "halfplane"] as ToolKind[]).map((t) => {
               const on = spec.tools.includes(t);
               return (
                 <button
