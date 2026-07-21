@@ -392,11 +392,16 @@ function ShapeSvg({
   shape,
   sx,
   sy,
+  vw,
+  vh,
 }: {
   shape: DrawShape;
   sx: (x: number) => number;
   sy: (y: number) => number;
+  vw: number;
+  vh: number;
 }) {
+
   const stroke = "var(--primary)";
   switch (shape.type) {
     case "point":
