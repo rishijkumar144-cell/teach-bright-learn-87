@@ -160,6 +160,7 @@ export function LessonPlayer({
         return;
       }
     }
+    sfx.submit();
     setSubmitted((s) => ({ ...s, [b.id]: true }));
   };
 
