@@ -8,7 +8,9 @@ export type ToolKind =
   | "parabola"
   | "circle"
   | "ellipse"
-  | "hyperbola";
+  | "hyperbola"
+  | "halfplane";
+
 
 // ---------- Static 2D diagram ----------
 
