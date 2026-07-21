@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { generateGameQuestions } from "@/lib/ai.functions";
 import { ParagraphWithMath } from "@/components/teacher/BlockEditor";
+import { sfx } from "@/lib/sfx";
 
 export interface StudyQA {
   q: string;
