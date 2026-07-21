@@ -986,6 +986,8 @@ function JumpingJacksGame({ questions, onExit }: { questions: StudyQA[]; onExit:
     setSpeedMs(built.speedMs);
     setPos(0);
     setAirborne(0);
+    posRef.current = 0;
+    airRef.current = 0;
     setFailedTile(null);
     setPhase("play");
   };
