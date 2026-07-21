@@ -33,7 +33,6 @@ import {
   Grid3x3,
   MapPin,
   FileUp,
-  Paperclip,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
