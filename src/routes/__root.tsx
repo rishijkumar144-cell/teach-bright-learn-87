@@ -13,8 +13,8 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "../lib/store";
 import { AccessibilityProvider, AccessibilityToolbar } from "@/components/AccessibilityToolbar";
-
-import { Toaster } from "@/components/ui/sonner";
+import { installGlobalClickSfx, sfx } from "@/lib/sfx";
+import { toast, Toaster } from "sonner";
 
 function NotFoundComponent() {
   return (
