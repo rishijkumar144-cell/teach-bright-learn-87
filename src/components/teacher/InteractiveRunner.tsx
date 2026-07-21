@@ -465,6 +465,37 @@ function CoordWidget({
           <Trash2 className="h-3 w-3" /> Clear
         </Button>
       </div>
+      {tool === "halfplane" && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-background p-2 text-xs">
+          <span className="font-semibold">Shade:</span>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setShadeAbove(true)}
+            className={cn("rounded-md border px-2 py-1", shadeAbove ? "border-primary bg-primary/10 text-primary" : "border-border")}
+          >Above / right of line</button>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setShadeAbove(false)}
+            className={cn("rounded-md border px-2 py-1", !shadeAbove ? "border-primary bg-primary/10 text-primary" : "border-border")}
+          >Below / left of line</button>
+          <span className="ml-2 font-semibold">Boundary:</span>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setShadeStrict(false)}
+            className={cn("rounded-md border px-2 py-1", !shadeStrict ? "border-primary bg-primary/10 text-primary" : "border-border")}
+          >Inclusive (≤ / ≥)</button>
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => setShadeStrict(true)}
+            className={cn("rounded-md border px-2 py-1", shadeStrict ? "border-primary bg-primary/10 text-primary" : "border-border")}
+          >Strict (&lt; / &gt;)</button>
+        </div>
+      )}
+
       <div className="rounded-lg border border-border bg-accent/30 p-3 text-xs">
         <div className="mb-1 font-semibold capitalize">How to draw a {tool}</div>
         <ol className="list-decimal space-y-0.5 pl-4">
