@@ -477,8 +477,72 @@ function ShapeSvg({
         </g>
       );
     }
+    case "halfplane": {
+      // Line through (x1,y1)-(x2,y2); shade the side above (larger y) or below (smaller y)
+      // For a vertical line, "above" means the right side (larger x).
+      const dx = shape.x2 - shape.x1;
+      const dy = shape.y2 - shape.y1;
+      const isVertical = Math.abs(dx) < 1e-9;
+      // Build shaded polygon in math coords over an oversized bounding box, then project.
+      // Since sx/sy are monotonic linear, straight math edges stay straight in svg.
+      const BIG = 1e5;
+      let poly: { x: number; y: number }[] = [];
+      if (isVertical) {
+        const xL = shape.x1;
+        // "above" ⇒ right side
+        const shadeRight = shape.above;
+        const xFar = shadeRight ? BIG : -BIG;
+        poly = [
+          { x: xL, y: -BIG },
+          { x: xL, y: BIG },
+          { x: xFar, y: BIG },
+          { x: xFar, y: -BIG },
+        ];
+      } else {
+        const m = dy / dx;
+        const b0 = shape.y1 - m * shape.x1;
+        const yFar = shape.above ? BIG : -BIG;
+        // Sample line across full x range
+        const xL = -BIG;
+        const xR = BIG;
+        poly = [
+          { x: xL, y: m * xL + b0 },
+          { x: xR, y: m * xR + b0 },
+          { x: xR, y: yFar },
+          { x: xL, y: yFar },
+        ];
+      }
+      const pts = poly.map((p) => `${sx(p.x)},${sy(p.y)}`).join(" ");
+      // Boundary line — extend across visible range as well
+      let bx1: number, by1: number, bx2: number, by2: number;
+      if (isVertical) {
+        bx1 = bx2 = sx(shape.x1);
+        by1 = sy(-BIG);
+        by2 = sy(BIG);
+      } else {
+        const m = dy / dx;
+        const b0 = shape.y1 - m * shape.x1;
+        bx1 = sx(-BIG); by1 = sy(m * -BIG + b0);
+        bx2 = sx(BIG); by2 = sy(m * BIG + b0);
+      }
+      return (
+        <g>
+          <polygon points={pts} fill={stroke} fillOpacity={0.18} stroke="none" />
+          <line
+            x1={bx1}
+            y1={by1}
+            x2={bx2}
+            y2={by2}
+            stroke={stroke}
+            strokeWidth={2}
+            strokeDasharray={shape.strict ? "5 4" : undefined}
+          />
+        </g>
+      );
+    }
   }
 }
+
 
 function CoordChart({ spec }: { spec: Extract<StaticSpec, { kind: "coord" }> }) {
   return (
