@@ -1002,8 +1002,6 @@ function JumpingJacksGame({ questions, onExit }: { questions: StudyQA[]; onExit:
 
 
   // Auto-advance using refs to avoid nested-updater issues in StrictMode
-  const posRef = useRef(0);
-  const airRef = useRef(0);
   useEffect(() => { posRef.current = pos; }, [pos]);
   useEffect(() => { airRef.current = airborne; }, [airborne]);
   useEffect(() => {
