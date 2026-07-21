@@ -12,8 +12,15 @@ export type ToolKind =
 
 // ---------- Static 2D diagram ----------
 
+export interface ImageLabel {
+  id: string;
+  x: number; // 0-100 percent
+  y: number; // 0-100 percent
+  text: string;
+}
+
 export type StaticSpec =
-  | { kind: "image"; url: string; caption?: string }
+  | { kind: "image"; url: string; caption?: string; labels?: ImageLabel[] }
   | { kind: "table"; headers: string[]; rows: string[][]; caption?: string }
   | {
       kind: "bar";

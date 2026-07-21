@@ -8,11 +8,31 @@ export function StaticChart({ spec }: { spec: StaticSpec }) {
     case "image":
       return spec.url ? (
         <figure className="overflow-hidden rounded-2xl border border-border">
-          <img
-            src={spec.url}
-            alt={spec.caption || ""}
-            className="w-full bg-background object-contain"
-          />
+          <div className="relative">
+            <img
+              src={spec.url}
+              alt={spec.caption || ""}
+              className="w-full bg-background object-contain"
+            />
+            {(spec.labels ?? []).map((p) => (
+              <div
+                key={p.id}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${p.x}%`, top: `${p.y}%` }}
+              >
+                <div className="flex items-center gap-1">
+                  <span className="grid h-5 w-5 place-items-center rounded-full border-2 border-background bg-primary text-[10px] font-bold text-primary-foreground shadow">
+                    •
+                  </span>
+                  {p.text && (
+                    <span className="whitespace-nowrap rounded-md bg-background/90 px-1.5 py-0.5 text-xs font-semibold text-foreground shadow ring-1 ring-border">
+                      {p.text}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
           {spec.caption && (
             <figcaption className="p-3 text-sm text-muted-foreground">{spec.caption}</figcaption>
           )}
@@ -746,7 +766,7 @@ export function GeometrySvg({
   );
 }
 
-function EdgeSvg({ a, b, edge, sx, sy }: { a: GeoPoint; b: GeoPoint; edge: GeoEdge; sx: (n: number) => number; sy: (n: number) => number }) {
+export function EdgeSvg({ a, b, edge, sx, sy }: { a: GeoPoint; b: GeoPoint; edge: GeoEdge; sx: (n: number) => number; sy: (n: number) => number }) {
   const x1 = sx(a.x), y1 = sy(a.y), x2 = sx(b.x), y2 = sy(b.y);
   const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
   const dx = x2 - x1, dy = y2 - y1;
@@ -781,7 +801,7 @@ function EdgeSvg({ a, b, edge, sx, sy }: { a: GeoPoint; b: GeoPoint; edge: GeoEd
   );
 }
 
-function AngleSvg({ vertex, from, to, angle, sx, sy }: { vertex: GeoPoint; from: GeoPoint; to: GeoPoint; angle: GeoAngle; sx: (n: number) => number; sy: (n: number) => number }) {
+export function AngleSvg({ vertex, from, to, angle, sx, sy }: { vertex: GeoPoint; from: GeoPoint; to: GeoPoint; angle: GeoAngle; sx: (n: number) => number; sy: (n: number) => number }) {
   const vx = sx(vertex.x), vy = sy(vertex.y);
   const a1 = Math.atan2(sy(from.y) - vy, sx(from.x) - vx);
   const a2 = Math.atan2(sy(to.y) - vy, sx(to.x) - vx);

@@ -13,6 +13,7 @@ export type BlockType =
   | "model3d"
   | "model2d"
   | "interactive"
+  | "upload"
   | "hint"
   | "divider"
   | "summary"
