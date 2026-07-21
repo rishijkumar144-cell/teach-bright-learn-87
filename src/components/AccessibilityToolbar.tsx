@@ -9,10 +9,13 @@ import {
   Baseline,
   RotateCcw,
   X,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { isMuted, setMuted, sfx } from "@/lib/sfx";
 
 const KEY = "mathly.a11y.v1";
 
