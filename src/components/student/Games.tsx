@@ -915,6 +915,8 @@ function JumpingJacksGame({ questions, onExit }: { questions: StudyQA[]; onExit:
   const [pos, setPos] = useState(0);
   const [airborne, setAirborne] = useState(0);
   const [failedTile, setFailedTile] = useState<number | null>(null);
+  const posRef = useRef(0);
+  const airRef = useRef(0);
 
   const q = questions[idx % Math.max(1, questions.length)];
   const secondsLeft = Math.max(0, Math.ceil((deadline - now) / 1000));
