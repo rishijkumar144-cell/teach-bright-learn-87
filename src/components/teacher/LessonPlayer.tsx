@@ -39,6 +39,10 @@ function hasAnswer(block: Block, value: unknown): boolean {
     case "short":
     case "open":
       return typeof value === "string" && value.trim().length > 0;
+    case "upload": {
+      const v = value as { name?: string; data?: string } | undefined;
+      return !!v && typeof v.data === "string" && v.data.length > 0;
+    }
     case "interactive": {
       const spec = (block.data as Record<string, unknown>).spec as InteractiveSpec | null;
       if (!spec) return true;
