@@ -65,6 +65,9 @@ import { MathPreview } from "./MathPreview";
 import { EquationEditor } from "./EquationEditor";
 import type {
   DrawShape,
+  GeoAngle,
+  GeoEdge,
+  GeoPoint,
   InteractiveSpec,
   StaticKind,
   StaticSpec,
@@ -76,6 +79,9 @@ import {
   InteractiveBarPreview,
   InteractivePieVisual,
   CoordinateGrid,
+  NumberLineSvg,
+  FractionRows,
+  GeometrySvg,
 } from "./Charts";
 
 interface BlockDef {
@@ -994,6 +1000,10 @@ const STATIC_KINDS: { kind: StaticKind; label: string; Icon: typeof BarChart3 }[
   { kind: "lineplot", label: "Line plot", Icon: LineIcon },
   { kind: "stemleaf", label: "Stem & leaf", Icon: TableIcon },
   { kind: "coord", label: "Coordinate plane", Icon: Grid3x3 },
+  { kind: "numberline", label: "Number line", Icon: LineIcon },
+  { kind: "grid", label: "Blank grid", Icon: Grid3x3 },
+  { kind: "fraction", label: "Fraction chart", Icon: BarChart3 },
+  { kind: "geometry", label: "Geometry figure", Icon: MapPin },
   { kind: "image", label: "Upload image", Icon: ImageIcon },
 ];
 
@@ -1015,8 +1025,29 @@ function defaultStaticSpec(kind: StaticKind): StaticSpec {
       return { kind: "stemleaf", title: "Stem & leaf", values: [12, 15, 18, 21, 24, 27, 33, 35] };
     case "coord":
       return { kind: "coord", title: "Coordinate plane", xMin: -5, xMax: 5, yMin: -5, yMax: 5, shapes: [] };
+    case "numberline":
+      return { kind: "numberline", title: "Number line", min: 0, max: 10, step: 1, marks: [{ value: 4, label: "A" }], intervals: [] };
+    case "grid":
+      return { kind: "grid", title: "Grid", cols: 10, rows: 8, style: "square", showAxes: false };
+    case "fraction":
+      return { kind: "fraction", title: "Fractions", rows: [{ label: "1/2", parts: 2, shaded: 1 }, { label: "2/4", parts: 4, shaded: 2 }, { label: "3/8", parts: 8, shaded: 3 }] };
+    case "geometry": {
+      const a = newId(), b = newId(), c = newId();
+      return {
+        kind: "geometry",
+        title: "Triangle ABC",
+        points: [
+          { id: a, x: 20, y: 80, label: "A" },
+          { id: b, x: 80, y: 80, label: "B" },
+          { id: c, x: 50, y: 20, label: "C" },
+        ],
+        edges: [{ a, b: b }, { a: b, b: c }, { a: c, b: a }],
+        angles: [],
+      };
+    }
   }
 }
+
 
 function Model2DBlockEditor({
   d,
@@ -1086,6 +1117,14 @@ function StaticSpecEditor({ spec, onChange }: { spec: StaticSpec; onChange: (s: 
       return <StaticStemLeafEditor spec={spec} onChange={onChange} />;
     case "coord":
       return <StaticCoordEditor spec={spec} onChange={onChange} />;
+    case "numberline":
+      return <StaticNumberLineEditor spec={spec} onChange={onChange} />;
+    case "grid":
+      return <StaticGridEditor spec={spec} onChange={onChange} />;
+    case "fraction":
+      return <StaticFractionEditor spec={spec} onChange={onChange} />;
+    case "geometry":
+      return <StaticGeometryEditor spec={spec} onChange={onChange} />;
   }
 }
 
@@ -1637,3 +1676,302 @@ function FillImageEditor({
 // _unused kept to silence lint for imported icons intentionally reserved
 void SLICE_COLORS;
 
+
+// ============================================================
+// Number line editor
+// ============================================================
+
+function StaticNumberLineEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "numberline" }>; onChange: (s: StaticSpec) => void }) {
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      <div className="grid grid-cols-3 gap-2">
+        <div><Label className="text-xs">Min</Label><Input type="number" value={spec.min} onChange={(e) => onChange({ ...spec, min: Number(e.target.value) })} /></div>
+        <div><Label className="text-xs">Max</Label><Input type="number" value={spec.max} onChange={(e) => onChange({ ...spec, max: Number(e.target.value) })} /></div>
+        <div><Label className="text-xs">Step</Label><Input type="number" value={spec.step} onChange={(e) => onChange({ ...spec, step: Number(e.target.value) || 1 })} /></div>
+      </div>
+      <div>
+        <Label className="text-xs">Points</Label>
+        {spec.marks.map((m, i) => (
+          <div key={i} className="mt-1 flex gap-2">
+            <Input type="number" value={m.value} onChange={(e) => onChange({ ...spec, marks: spec.marks.map((x, k) => k === i ? { ...x, value: Number(e.target.value) } : x) })} placeholder="value" className="w-28" />
+            <Input value={m.label ?? ""} onChange={(e) => onChange({ ...spec, marks: spec.marks.map((x, k) => k === i ? { ...x, label: e.target.value } : x) })} placeholder="label" />
+            <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, marks: spec.marks.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" className="mt-1" onClick={() => onChange({ ...spec, marks: [...spec.marks, { value: spec.min, label: "" }] })}><Plus className="h-4 w-4" /> Point</Button>
+      </div>
+      <div>
+        <Label className="text-xs">Intervals</Label>
+        {spec.intervals.map((iv, i) => (
+          <div key={i} className="mt-1 flex flex-wrap items-center gap-2">
+            <Input type="number" value={iv.from} onChange={(e) => onChange({ ...spec, intervals: spec.intervals.map((x, k) => k === i ? { ...x, from: Number(e.target.value) } : x) })} placeholder="from" className="w-24" />
+            <Input type="number" value={iv.to} onChange={(e) => onChange({ ...spec, intervals: spec.intervals.map((x, k) => k === i ? { ...x, to: Number(e.target.value) } : x) })} placeholder="to" className="w-24" />
+            <label className="flex items-center gap-1 text-xs"><Checkbox checked={iv.closedLeft !== false} onCheckedChange={(v) => onChange({ ...spec, intervals: spec.intervals.map((x, k) => k === i ? { ...x, closedLeft: !!v } : x) })} />[</label>
+            <label className="flex items-center gap-1 text-xs"><Checkbox checked={iv.closedRight !== false} onCheckedChange={(v) => onChange({ ...spec, intervals: spec.intervals.map((x, k) => k === i ? { ...x, closedRight: !!v } : x) })} />]</label>
+            <Input value={iv.label ?? ""} onChange={(e) => onChange({ ...spec, intervals: spec.intervals.map((x, k) => k === i ? { ...x, label: e.target.value } : x) })} placeholder="label" className="flex-1 min-w-32" />
+            <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, intervals: spec.intervals.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" className="mt-1" onClick={() => onChange({ ...spec, intervals: [...spec.intervals, { from: spec.min, to: spec.max }] })}><Plus className="h-4 w-4" /> Interval</Button>
+      </div>
+      <div className="rounded-lg border border-border bg-background p-2"><NumberLineSvg spec={spec} /></div>
+    </div>
+  );
+}
+
+// ============================================================
+// Blank grid editor
+// ============================================================
+
+function StaticGridEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "grid" }>; onChange: (s: StaticSpec) => void }) {
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      <div className="grid grid-cols-3 gap-2">
+        <div><Label className="text-xs">Cols</Label><Input type="number" min={1} max={40} value={spec.cols} onChange={(e) => onChange({ ...spec, cols: Math.max(1, Math.min(40, Number(e.target.value) || 1)) })} /></div>
+        <div><Label className="text-xs">Rows</Label><Input type="number" min={1} max={40} value={spec.rows} onChange={(e) => onChange({ ...spec, rows: Math.max(1, Math.min(40, Number(e.target.value) || 1)) })} /></div>
+        <div>
+          <Label className="text-xs">Style</Label>
+          <select className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm" value={spec.style} onChange={(e) => onChange({ ...spec, style: e.target.value as "square" | "dot" | "isometric" })}>
+            <option value="square">Square</option>
+            <option value="dot">Dot</option>
+            <option value="isometric">Isometric</option>
+          </select>
+        </div>
+      </div>
+      <label className="flex items-center gap-2 text-xs"><Checkbox checked={!!spec.showAxes} onCheckedChange={(v) => onChange({ ...spec, showAxes: !!v })} /> Show heavy X/Y edges</label>
+    </div>
+  );
+}
+
+// ============================================================
+// Fraction chart editor
+// ============================================================
+
+function StaticFractionEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "fraction" }>; onChange: (s: StaticSpec) => void }) {
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      {spec.rows.map((r, i) => (
+        <div key={i} className="flex flex-wrap items-center gap-2">
+          <Input value={r.label ?? ""} placeholder="Label (e.g. 1/2)" className="w-28" onChange={(e) => onChange({ ...spec, rows: spec.rows.map((x, k) => k === i ? { ...x, label: e.target.value } : x) })} />
+          <div className="flex items-center gap-1 text-xs">
+            <span>Shaded</span>
+            <Input type="number" min={0} value={r.shaded} className="w-16" onChange={(e) => onChange({ ...spec, rows: spec.rows.map((x, k) => k === i ? { ...x, shaded: Math.max(0, Number(e.target.value) || 0) } : x) })} />
+            <span>of</span>
+            <Input type="number" min={1} value={r.parts} className="w-16" onChange={(e) => onChange({ ...spec, rows: spec.rows.map((x, k) => k === i ? { ...x, parts: Math.max(1, Number(e.target.value) || 1) } : x) })} />
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => onChange({ ...spec, rows: spec.rows.filter((_, k) => k !== i) })}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={() => onChange({ ...spec, rows: [...spec.rows, { label: "", parts: 4, shaded: 1 }] })}><Plus className="h-4 w-4" /> Row</Button>
+      <div className="rounded-lg border border-border bg-background p-3"><FractionRows rows={spec.rows} /></div>
+    </div>
+  );
+}
+
+// ============================================================
+// Geometry figure editor
+// ============================================================
+
+type GeoTool = "select" | "point" | "edge" | "angle" | "delete";
+
+function StaticGeometryEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kind: "geometry" }>; onChange: (s: StaticSpec) => void }) {
+  const [tool, setTool] = useState<GeoTool>("select");
+  const [scratch, setScratch] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const dragging = useRef<string | null>(null);
+
+  const setPoints = (points: GeoPoint[]) => onChange({ ...spec, points });
+  const setEdges = (edges: GeoEdge[]) => onChange({ ...spec, edges });
+  const setAngles = (angles: GeoAngle[]) => onChange({ ...spec, angles });
+
+  const nextLabel = () => {
+    const used = new Set(spec.points.map((p) => (p.label ?? "").toUpperCase()));
+    for (let i = 0; i < 26; i++) {
+      const c = String.fromCharCode(65 + i);
+      if (!used.has(c)) return c;
+    }
+    return "P";
+  };
+
+  const svgCoords = (e: React.PointerEvent) => {
+    const svg = svgRef.current!;
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100)),
+      y: Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100)),
+    };
+  };
+
+  const handleSvgClick = (e: React.PointerEvent) => {
+    if (tool !== "point") return;
+    const { x, y } = svgCoords(e);
+    setPoints([...spec.points, { id: newId(), x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, label: nextLabel() }]);
+  };
+
+  const onPointDown = (id: string, e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (tool === "select") {
+      dragging.current = id;
+      setSelected(id);
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+    } else if (tool === "delete") {
+      setPoints(spec.points.filter((p) => p.id !== id));
+      setEdges(spec.edges.filter((e2) => e2.a !== id && e2.b !== id));
+      setAngles(spec.angles.filter((a) => a.at !== id && a.from !== id && a.to !== id));
+    } else if (tool === "edge") {
+      const n = [...scratch, id];
+      if (n.length === 2) {
+        if (n[0] !== n[1] && !spec.edges.some((ed) => (ed.a === n[0] && ed.b === n[1]) || (ed.a === n[1] && ed.b === n[0]))) {
+          setEdges([...spec.edges, { a: n[0], b: n[1] }]);
+        }
+        setScratch([]);
+      } else setScratch(n);
+    } else if (tool === "angle") {
+      const n = [...scratch, id];
+      if (n.length === 3) {
+        // order: from, vertex, to
+        setAngles([...spec.angles, { from: n[0], at: n[1], to: n[2] }]);
+        setScratch([]);
+      } else setScratch(n);
+    }
+  };
+
+  const onSvgMove = (e: React.PointerEvent) => {
+    if (!dragging.current) return;
+    const { x, y } = svgCoords(e);
+    setPoints(spec.points.map((p) => p.id === dragging.current ? { ...p, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 } : p));
+  };
+  const onSvgUp = () => { dragging.current = null; };
+
+  const W = 480, H = 360;
+  const sx = (x: number) => (x / 100) * W;
+  const sy = (y: number) => (y / 100) * H;
+  const byId = new Map(spec.points.map((p) => [p.id, p] as const));
+
+  const selectedPoint = selected ? byId.get(selected) : null;
+
+  return (
+    <div className="space-y-2">
+      <TitleField value={spec.title} onChange={(v) => onChange({ ...spec, title: v })} />
+      <div className="flex flex-wrap gap-2">
+        {(["select", "point", "edge", "angle", "delete"] as GeoTool[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => { setTool(t); setScratch([]); }}
+            className={cn("rounded-md border px-2 py-1 text-xs capitalize", tool === t ? "border-primary bg-primary/10 text-primary" : "border-border")}
+          >
+            {t === "select" ? "Move / select" : t === "point" ? "Add vertex" : t === "edge" ? "Connect edge" : t === "angle" ? "Mark angle" : "Delete"}
+          </button>
+        ))}
+        <Button variant="outline" size="sm" onClick={() => onChange({ ...spec, points: [], edges: [], angles: [] })}><Trash2 className="h-4 w-4" /> Clear</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {tool === "select" && "Drag any vertex to reposition it. Click to select and edit its label."}
+        {tool === "point" && "Click on the canvas to add a labeled vertex."}
+        {tool === "edge" && `Click two vertices to connect them (${scratch.length}/2).`}
+        {tool === "angle" && `Click 3 vertices: side, vertex, side (${scratch.length}/3).`}
+        {tool === "delete" && "Click a vertex to remove it (and its edges/angles)."}
+      </p>
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className={cn("w-full select-none rounded-xl border border-border bg-background", tool === "point" ? "cursor-crosshair" : "cursor-default")}
+        onPointerDown={handleSvgClick}
+        onPointerMove={onSvgMove}
+        onPointerUp={onSvgUp}
+      >
+        {spec.edges.map((e, i) => {
+          const a = byId.get(e.a), b = byId.get(e.b);
+          if (!a || !b) return null;
+          return (
+            <g key={i}>
+              <line x1={sx(a.x)} y1={sy(a.y)} x2={sx(b.x)} y2={sy(b.y)} stroke="var(--foreground)" strokeWidth={2} />
+            </g>
+          );
+        })}
+        {/* re-render with markers via reusing GeometrySvg's helpers would double-draw; keep this simple and let the preview below show full styling */}
+        {spec.points.map((p) => (
+          <g
+            key={p.id}
+            onPointerDown={(e) => onPointDown(p.id, e)}
+            style={{ cursor: tool === "select" ? "grab" : "pointer" }}
+          >
+            <circle
+              cx={sx(p.x)}
+              cy={sy(p.y)}
+              r={selected === p.id || scratch.includes(p.id) ? 9 : 6}
+              fill={scratch.includes(p.id) ? "var(--primary)" : "var(--primary)"}
+              stroke="var(--background)"
+              strokeWidth={2}
+              opacity={scratch.includes(p.id) ? 0.7 : 1}
+            />
+            {p.label && (
+              <text x={sx(p.x) + 10} y={sy(p.y) - 8} className="fill-current text-[13px] font-semibold pointer-events-none">{p.label}</text>
+            )}
+          </g>
+        ))}
+      </svg>
+
+      {selectedPoint && (
+        <div className="rounded-lg border border-border bg-accent/20 p-2">
+          <Label className="text-xs">Selected vertex label</Label>
+          <Input
+            value={selectedPoint.label ?? ""}
+            onChange={(e) => setPoints(spec.points.map((p) => p.id === selectedPoint.id ? { ...p, label: e.target.value } : p))}
+          />
+        </div>
+      )}
+
+      {spec.edges.length > 0 && (
+        <div className="space-y-1">
+          <Label className="text-xs">Edge marks</Label>
+          {spec.edges.map((e, i) => {
+            const a = byId.get(e.a)?.label ?? "?";
+            const b = byId.get(e.b)?.label ?? "?";
+            return (
+              <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border border-border p-1.5 text-xs">
+                <span className="w-14 font-mono font-semibold">{a}–{b}</span>
+                <span>Parallel marks</span>
+                <Input type="number" min={0} max={3} value={e.parallel ?? 0} className="w-16 h-8" onChange={(ev) => setEdges(spec.edges.map((x, k) => k === i ? { ...x, parallel: Math.max(0, Math.min(3, Number(ev.target.value) || 0)) || undefined } : x))} />
+                <span>Tick marks (congruent)</span>
+                <Input type="number" min={0} max={3} value={e.tick ?? 0} className="w-16 h-8" onChange={(ev) => setEdges(spec.edges.map((x, k) => k === i ? { ...x, tick: Math.max(0, Math.min(3, Number(ev.target.value) || 0)) || undefined } : x))} />
+                <Button variant="ghost" size="icon" onClick={() => setEdges(spec.edges.filter((_, k) => k !== i))}><Trash2 className="h-3 w-3" /></Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {spec.angles.length > 0 && (
+        <div className="space-y-1">
+          <Label className="text-xs">Angles</Label>
+          {spec.angles.map((ang, i) => {
+            const at = byId.get(ang.at)?.label ?? "?";
+            const from = byId.get(ang.from)?.label ?? "?";
+            const to = byId.get(ang.to)?.label ?? "?";
+            return (
+              <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border border-border p-1.5 text-xs">
+                <span className="w-20 font-mono font-semibold">∠{from}{at}{to}</span>
+                <Input placeholder="label (e.g. 60°)" value={ang.label ?? ""} className="h-8 flex-1 min-w-32" onChange={(ev) => setAngles(spec.angles.map((x, k) => k === i ? { ...x, label: ev.target.value } : x))} />
+                <label className="flex items-center gap-1"><Checkbox checked={!!ang.right} onCheckedChange={(v) => setAngles(spec.angles.map((x, k) => k === i ? { ...x, right: !!v } : x))} /> Right angle</label>
+                <Button variant="ghost" size="icon" onClick={() => setAngles(spec.angles.filter((_, k) => k !== i))}><Trash2 className="h-3 w-3" /></Button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div>
+        <Label className="text-xs">Preview</Label>
+        <div className="rounded-lg border border-border bg-background p-2">
+          <GeometrySvg points={spec.points} edges={spec.edges} angles={spec.angles} />
+        </div>
+      </div>
+    </div>
+  );
+}

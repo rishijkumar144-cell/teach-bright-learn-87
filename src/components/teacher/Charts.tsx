@@ -1,4 +1,4 @@
-import type { DrawShape, StaticSpec } from "@/lib/charts";
+import type { DrawShape, GeoAngle, GeoEdge, GeoPoint, StaticSpec } from "@/lib/charts";
 import { SLICE_COLORS } from "@/lib/charts";
 
 const CHART_STROKE = "currentColor";
@@ -34,6 +34,14 @@ export function StaticChart({ spec }: { spec: StaticSpec }) {
       return <StemLeaf spec={spec} />;
     case "coord":
       return <CoordChart spec={spec} />;
+    case "numberline":
+      return <NumberLineChart spec={spec} />;
+    case "grid":
+      return <BlankGrid spec={spec} />;
+    case "fraction":
+      return <FractionChart spec={spec} />;
+    case "geometry":
+      return <GeometryChart spec={spec} />;
   }
 }
 
@@ -540,5 +548,269 @@ export function InteractivePieVisual({
         );
       })}
     </svg>
+  );
+}
+
+// ============================================================
+// Number line
+// ============================================================
+
+function NumberLineChart({ spec }: { spec: Extract<StaticSpec, { kind: "numberline" }> }) {
+  return (
+    <ChartFrame title={spec.title}>
+      <NumberLineSvg spec={spec} />
+    </ChartFrame>
+  );
+}
+
+export function NumberLineSvg({ spec }: { spec: Extract<StaticSpec, { kind: "numberline" }> }) {
+  const W = 400;
+  const H = 110;
+  const PAD = 30;
+  const step = spec.step > 0 ? spec.step : 1;
+  const span = Math.max(0.001, spec.max - spec.min);
+  const sx = (v: number) => PAD + ((v - spec.min) / span) * (W - PAD * 2);
+  const y = H - 40;
+  const ticks: number[] = [];
+  for (let v = spec.min; v <= spec.max + 1e-9; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-muted-foreground">
+      <defs>
+        <marker id="nl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+        </marker>
+      </defs>
+      <line x1={PAD - 10} y1={y} x2={W - PAD + 10} y2={y} stroke="currentColor" strokeWidth={1.5} markerStart="url(#nl-arrow)" markerEnd="url(#nl-arrow)" />
+      {ticks.map((t, i) => (
+        <g key={i}>
+          <line x1={sx(t)} y1={y - 6} x2={sx(t)} y2={y + 6} stroke="currentColor" />
+          <text x={sx(t)} y={y + 20} textAnchor="middle" className="fill-current text-[10px]">{t}</text>
+        </g>
+      ))}
+      {spec.intervals.map((iv, i) => {
+        const x1 = sx(iv.from), x2 = sx(iv.to);
+        return (
+          <g key={`iv${i}`} className="text-[var(--primary)]">
+            <line x1={x1} y1={y} x2={x2} y2={y} stroke="currentColor" strokeWidth={4} />
+            <circle cx={x1} cy={y} r={5} fill={iv.closedLeft === false ? "var(--background)" : "currentColor"} stroke="currentColor" strokeWidth={2} />
+            <circle cx={x2} cy={y} r={5} fill={iv.closedRight === false ? "var(--background)" : "currentColor"} stroke="currentColor" strokeWidth={2} />
+            {iv.label && <text x={(x1 + x2) / 2} y={y - 12} textAnchor="middle" className="fill-current text-[10px] font-semibold">{iv.label}</text>}
+          </g>
+        );
+      })}
+      {spec.marks.map((m, i) => (
+        <g key={`mk${i}`} className="text-[var(--primary)]">
+          <circle cx={sx(m.value)} cy={y} r={5} fill="currentColor" />
+          {m.label && <text x={sx(m.value)} y={y - 12} textAnchor="middle" className="fill-current text-[10px] font-semibold">{m.label}</text>}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+// ============================================================
+// Blank grid
+// ============================================================
+
+function BlankGrid({ spec }: { spec: Extract<StaticSpec, { kind: "grid" }> }) {
+  const cell = 28;
+  const W = spec.cols * cell + 20;
+  const H = spec.rows * cell + 20;
+  const lines: React.ReactNode[] = [];
+  if (spec.style === "square") {
+    for (let i = 0; i <= spec.cols; i++)
+      lines.push(<line key={`v${i}`} x1={10 + i * cell} y1={10} x2={10 + i * cell} y2={10 + spec.rows * cell} stroke="var(--border)" strokeWidth={i === 0 || i === spec.cols ? 1.2 : 0.6} />);
+    for (let j = 0; j <= spec.rows; j++)
+      lines.push(<line key={`h${j}`} x1={10} y1={10 + j * cell} x2={10 + spec.cols * cell} y2={10 + j * cell} stroke="var(--border)" strokeWidth={j === 0 || j === spec.rows ? 1.2 : 0.6} />);
+  } else if (spec.style === "dot") {
+    for (let i = 0; i <= spec.cols; i++)
+      for (let j = 0; j <= spec.rows; j++)
+        lines.push(<circle key={`d${i}-${j}`} cx={10 + i * cell} cy={10 + j * cell} r={1.5} fill="var(--muted-foreground)" />);
+  } else {
+    // isometric: 60deg diagonals + horizontals
+    const h = cell * Math.sqrt(3) / 2;
+    for (let j = 0; j <= spec.rows; j++)
+      lines.push(<line key={`ih${j}`} x1={10} y1={10 + j * h} x2={10 + spec.cols * cell} y2={10 + j * h} stroke="var(--border)" strokeWidth={0.6} />);
+    for (let i = -spec.rows; i <= spec.cols + spec.rows; i++) {
+      const x0 = 10 + i * cell;
+      lines.push(<line key={`ia${i}`} x1={x0} y1={10} x2={x0 + spec.rows * h / Math.sqrt(3)} y2={10 + spec.rows * h} stroke="var(--border)" strokeWidth={0.6} />);
+      lines.push(<line key={`ib${i}`} x1={x0} y1={10} x2={x0 - spec.rows * h / Math.sqrt(3)} y2={10 + spec.rows * h} stroke="var(--border)" strokeWidth={0.6} />);
+    }
+  }
+  return (
+    <ChartFrame title={spec.title}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+        {lines}
+        {spec.showAxes && spec.style === "square" && (
+          <>
+            <line x1={10} y1={10 + spec.rows * cell} x2={10 + spec.cols * cell + 4} y2={10 + spec.rows * cell} stroke="currentColor" strokeWidth={1.5} />
+            <line x1={10} y1={10} x2={10} y2={10 + spec.rows * cell} stroke="currentColor" strokeWidth={1.5} />
+          </>
+        )}
+      </svg>
+    </ChartFrame>
+  );
+}
+
+// ============================================================
+// Fraction chart
+// ============================================================
+
+function FractionChart({ spec }: { spec: Extract<StaticSpec, { kind: "fraction" }> }) {
+  return (
+    <ChartFrame title={spec.title}>
+      <FractionRows rows={spec.rows} />
+    </ChartFrame>
+  );
+}
+
+export function FractionRows({ rows }: { rows: { label?: string; parts: number; shaded: number }[] }) {
+  return (
+    <div className="space-y-2">
+      {rows.map((row, i) => {
+        const parts = Math.max(1, Math.floor(row.parts));
+        const shaded = Math.max(0, Math.min(parts, Math.floor(row.shaded)));
+        return (
+          <div key={i} className="flex items-center gap-3">
+            <div className="w-14 shrink-0 text-right text-sm font-semibold">{row.label ?? `${shaded}/${parts}`}</div>
+            <div className="flex h-8 flex-1 overflow-hidden rounded-md border border-border">
+              {Array.from({ length: parts }, (_, k) => (
+                <div
+                  key={k}
+                  className={k < shaded ? "bg-primary/70" : "bg-background"}
+                  style={{ flex: 1, borderRight: k < parts - 1 ? "1px solid var(--border)" : "none" }}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ============================================================
+// Geometry figure (freeform polygon builder)
+// ============================================================
+
+function GeometryChart({ spec }: { spec: Extract<StaticSpec, { kind: "geometry" }> }) {
+  return (
+    <ChartFrame title={spec.title}>
+      <GeometrySvg points={spec.points} edges={spec.edges} angles={spec.angles} />
+    </ChartFrame>
+  );
+}
+
+export function GeometrySvg({
+  points,
+  edges,
+  angles,
+  onPointDown,
+  activeId,
+}: {
+  points: GeoPoint[];
+  edges: GeoEdge[];
+  angles: GeoAngle[];
+  onPointDown?: (id: string, e: React.PointerEvent) => void;
+  activeId?: string | null;
+}) {
+  const W = 480, H = 360;
+  const sx = (x: number) => (x / 100) * W;
+  const sy = (y: number) => (y / 100) * H;
+  const byId = new Map(points.map((p) => [p.id, p] as const));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full select-none rounded-xl border border-border bg-background">
+      {edges.map((e, i) => {
+        const a = byId.get(e.a), b = byId.get(e.b);
+        if (!a || !b) return null;
+        return <EdgeSvg key={i} a={a} b={b} edge={e} sx={sx} sy={sy} />;
+      })}
+      {angles.map((ang, i) => {
+        const v = byId.get(ang.at), f = byId.get(ang.from), t = byId.get(ang.to);
+        if (!v || !f || !t) return null;
+        return <AngleSvg key={i} vertex={v} from={f} to={t} angle={ang} sx={sx} sy={sy} />;
+      })}
+      {points.map((p) => (
+        <g
+          key={p.id}
+          onPointerDown={onPointDown ? (e) => onPointDown(p.id, e) : undefined}
+          style={{ cursor: onPointDown ? "grab" : undefined }}
+        >
+          <circle cx={sx(p.x)} cy={sy(p.y)} r={activeId === p.id ? 8 : 5} fill="var(--primary)" stroke="var(--background)" strokeWidth={2} />
+          {p.label && (
+            <text x={sx(p.x) + 10} y={sy(p.y) - 8} className="fill-current text-[13px] font-semibold">{p.label}</text>
+          )}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function EdgeSvg({ a, b, edge, sx, sy }: { a: GeoPoint; b: GeoPoint; edge: GeoEdge; sx: (n: number) => number; sy: (n: number) => number }) {
+  const x1 = sx(a.x), y1 = sy(a.y), x2 = sx(b.x), y2 = sy(b.y);
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;
+  const nx = -uy, ny = ux;
+  const marks: React.ReactNode[] = [];
+  if (edge.parallel) {
+    const count = edge.parallel;
+    for (let k = 0; k < count; k++) {
+      const off = (k - (count - 1) / 2) * 5;
+      const cx = mx + ux * off, cy = my + uy * off;
+      // arrow-head shape
+      const p1x = cx + ux * -4 + nx * 4, p1y = cy + uy * -4 + ny * 4;
+      const p2x = cx + ux * -4 - nx * 4, p2y = cy + uy * -4 - ny * 4;
+      marks.push(<polyline key={`p${k}`} points={`${p1x},${p1y} ${cx},${cy} ${p2x},${p2y}`} fill="none" stroke="var(--primary)" strokeWidth={2} />);
+    }
+  }
+  if (edge.tick) {
+    const count = edge.tick;
+    for (let k = 0; k < count; k++) {
+      const off = (k - (count - 1) / 2) * 5;
+      const cx = mx + ux * off, cy = my + uy * off;
+      marks.push(<line key={`t${k}`} x1={cx + nx * 6} y1={cy + ny * 6} x2={cx - nx * 6} y2={cy - ny * 6} stroke="var(--primary)" strokeWidth={2} />);
+    }
+  }
+  return (
+    <g>
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth={2} />
+      {marks}
+    </g>
+  );
+}
+
+function AngleSvg({ vertex, from, to, angle, sx, sy }: { vertex: GeoPoint; from: GeoPoint; to: GeoPoint; angle: GeoAngle; sx: (n: number) => number; sy: (n: number) => number }) {
+  const vx = sx(vertex.x), vy = sy(vertex.y);
+  const a1 = Math.atan2(sy(from.y) - vy, sx(from.x) - vx);
+  const a2 = Math.atan2(sy(to.y) - vy, sx(to.x) - vx);
+  const r = 22;
+  if (angle.right) {
+    // square marker
+    const s = 14;
+    const c1x = vx + Math.cos(a1) * s, c1y = vy + Math.sin(a1) * s;
+    const c2x = vx + Math.cos(a2) * s, c2y = vy + Math.sin(a2) * s;
+    const c3x = c1x + (c2x - vx), c3y = c1y + (c2y - vy);
+    return (
+      <polyline points={`${c1x},${c1y} ${c3x},${c3y} ${c2x},${c2y}`} fill="none" stroke="var(--primary)" strokeWidth={1.8} />
+    );
+  }
+  // shortest sweep arc
+  let delta = a2 - a1;
+  while (delta > Math.PI) delta -= 2 * Math.PI;
+  while (delta < -Math.PI) delta += 2 * Math.PI;
+  const sweep = delta > 0 ? 1 : 0;
+  const x1 = vx + Math.cos(a1) * r, y1 = vy + Math.sin(a1) * r;
+  const x2 = vx + Math.cos(a2) * r, y2 = vy + Math.sin(a2) * r;
+  const large = Math.abs(delta) > Math.PI ? 1 : 0;
+  const midA = a1 + delta / 2;
+  const lx = vx + Math.cos(midA) * (r + 14);
+  const ly = vy + Math.sin(midA) * (r + 14);
+  return (
+    <g>
+      <path d={`M${x1},${y1} A${r},${r} 0 ${large} ${sweep} ${x2},${y2}`} fill="none" stroke="var(--primary)" strokeWidth={1.8} />
+      {angle.label && <text x={lx} y={ly} textAnchor="middle" dominantBaseline="middle" className="fill-current text-[11px] font-semibold">{angle.label}</text>}
+    </g>
   );
 }
