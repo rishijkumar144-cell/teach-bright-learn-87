@@ -98,7 +98,9 @@ export interface GeoEdge {
   b: string;
   parallel?: number;
   tick?: number;
+  curve?: number; // bulge in svg-space px; 0/undefined = straight
 }
+
 
 export interface GeoAngle {
   at: string;
