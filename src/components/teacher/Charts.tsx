@@ -484,56 +484,86 @@ function ShapeSvg({
       );
     }
     case "halfplane": {
-      // Line through (x1,y1)-(x2,y2); shade the side above (larger y) or below (smaller y)
-      // For a vertical line, "above" means the right side (larger x).
-      const dx = shape.x2 - shape.x1;
-      const dy = shape.y2 - shape.y1;
-      const isVertical = Math.abs(dx) < 1e-9;
-      // Build shaded polygon in math coords over an oversized bounding box, then project.
-      // Since sx/sy are monotonic linear, straight math edges stay straight in svg.
-      const BIG = 1e5;
-      let poly: { x: number; y: number }[] = [];
-      if (isVertical) {
-        const xL = shape.x1;
-        // "above" ⇒ right side
-        const shadeRight = shape.above;
-        const xFar = shadeRight ? BIG : -BIG;
-        poly = [
-          { x: xL, y: -BIG },
-          { x: xL, y: BIG },
-          { x: xFar, y: BIG },
-          { x: xFar, y: -BIG },
-        ];
-      } else {
-        const m = dy / dx;
-        const b0 = shape.y1 - m * shape.x1;
-        const yFar = shape.above ? BIG : -BIG;
-        // Sample line across full x range
-        const xL = -BIG;
-        const xR = BIG;
-        poly = [
-          { x: xL, y: m * xL + b0 },
-          { x: xR, y: m * xR + b0 },
-          { x: xR, y: yFar },
-          { x: xL, y: yFar },
-        ];
+      // Work entirely in svg-pixel space, clipping the viewport rectangle
+      // by the half-plane defined by the boundary line.
+      const p1 = { x: sx(shape.x1), y: sy(shape.y1) };
+      const p2 = { x: sx(shape.x2), y: sy(shape.y2) };
+      const dxp = p2.x - p1.x;
+      const dyp = p2.y - p1.y;
+      // Pick a reference point that is on the "shaded" side in MATH coords,
+      // then convert its side test into svg space via the same sx/sy.
+      const midX = (shape.x1 + shape.x2) / 2;
+      const midY = (shape.y1 + shape.y2) / 2;
+      // Move perpendicular to the line in math space, in the "above" direction.
+      // For non-vertical line: above = larger y.
+      // For vertical line (dx ~ 0): above = larger x (right side).
+      const isVertical = Math.abs(shape.x2 - shape.x1) < 1e-9;
+      const refMath = isVertical
+        ? { x: midX + (shape.above ? 1 : -1), y: midY }
+        : { x: midX, y: midY + (shape.above ? 1 : -1) };
+      const ref = { x: sx(refMath.x), y: sy(refMath.y) };
+      // Signed distance from ref to line p1-p2 in svg space
+      const sign = (q: { x: number; y: number }) =>
+        (q.x - p1.x) * dyp - (q.y - p1.y) * dxp;
+      const targetSign = Math.sign(sign(ref)) || 1;
+      // Sutherland-Hodgman clip of viewport by half-plane (sign * s >= 0).
+      const rect: { x: number; y: number }[] = [
+        { x: 0, y: 0 },
+        { x: vw, y: 0 },
+        { x: vw, y: vh },
+        { x: 0, y: vh },
+      ];
+      const inside = (q: { x: number; y: number }) => sign(q) * targetSign >= 0;
+      const intersect = (a: { x: number; y: number }, b: { x: number; y: number }) => {
+        const sa = sign(a), sb = sign(b);
+        const t = sa / (sa - sb);
+        return { x: a.x + t * (b.x - a.x), y: a.y + t * (b.y - a.y) };
+      };
+      let out = rect;
+      const input = out;
+      const clipped: { x: number; y: number }[] = [];
+      for (let i = 0; i < input.length; i++) {
+        const cur = input[i];
+        const prev = input[(i + input.length - 1) % input.length];
+        const curIn = inside(cur);
+        const prevIn = inside(prev);
+        if (curIn) {
+          if (!prevIn) clipped.push(intersect(prev, cur));
+          clipped.push(cur);
+        } else if (prevIn) {
+          clipped.push(intersect(prev, cur));
+        }
       }
-      const pts = poly.map((p) => `${sx(p.x)},${sy(p.y)}`).join(" ");
-      // Boundary line — extend across visible range as well
-      let bx1: number, by1: number, bx2: number, by2: number;
-      if (isVertical) {
-        bx1 = bx2 = sx(shape.x1);
-        by1 = sy(-BIG);
-        by2 = sy(BIG);
-      } else {
-        const m = dy / dx;
-        const b0 = shape.y1 - m * shape.x1;
-        bx1 = sx(-BIG); by1 = sy(m * -BIG + b0);
-        bx2 = sx(BIG); by2 = sy(m * BIG + b0);
+      out = clipped;
+      const pts = out.map((p) => `${p.x},${p.y}`).join(" ");
+      // Boundary line — extend across viewport in svg space
+      // Parametric: p1 + t * (p2 - p1). Solve where it enters/leaves viewport.
+      const ts: number[] = [];
+      if (Math.abs(dxp) > 1e-9) {
+        ts.push((0 - p1.x) / dxp);
+        ts.push((vw - p1.x) / dxp);
+      }
+      if (Math.abs(dyp) > 1e-9) {
+        ts.push((0 - p1.y) / dyp);
+        ts.push((vh - p1.y) / dyp);
+      }
+      const eps = 1e-6;
+      const valid = ts.filter((t) => {
+        const x = p1.x + t * dxp, y = p1.y + t * dyp;
+        return x >= -eps && x <= vw + eps && y >= -eps && y <= vh + eps;
+      });
+      let bx1 = p1.x, by1 = p1.y, bx2 = p2.x, by2 = p2.y;
+      if (valid.length >= 2) {
+        const tmin = Math.min(...valid);
+        const tmax = Math.max(...valid);
+        bx1 = p1.x + tmin * dxp; by1 = p1.y + tmin * dyp;
+        bx2 = p1.x + tmax * dxp; by2 = p1.y + tmax * dyp;
       }
       return (
         <g>
-          <polygon points={pts} fill={stroke} fillOpacity={0.18} stroke="none" />
+          {out.length >= 3 && (
+            <polygon points={pts} fill={stroke} fillOpacity={0.18} stroke="none" />
+          )}
           <line
             x1={bx1}
             y1={by1}
@@ -546,6 +576,7 @@ function ShapeSvg({
         </g>
       );
     }
+
   }
 }
 
