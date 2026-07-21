@@ -64,7 +64,9 @@ export type StaticSpec =
       step: number;
       marks: { value: number; label?: string }[];
       intervals: { from: number; to: number; label?: string; closedLeft?: boolean; closedRight?: boolean }[];
+      rays?: { at: number; direction: "left" | "right"; closed?: boolean; label?: string }[];
     }
+
   | {
       kind: "grid";
       title: string;
