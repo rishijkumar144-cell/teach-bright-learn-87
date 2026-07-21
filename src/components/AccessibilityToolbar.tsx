@@ -269,3 +269,24 @@ function Row({
     </div>
   );
 }
+
+function SoundToggleButton() {
+  const [muted, setMutedState] = useState<boolean>(() => isMuted());
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={muted ? "Unmute sounds" : "Mute sounds"}
+      data-sfx="off"
+      onClick={() => {
+        const next = !muted;
+        setMuted(next);
+        setMutedState(next);
+        if (!next) sfx.toggle();
+      }}
+      className="h-9 w-9 rounded-full"
+    >
+      {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+    </Button>
+  );
+}
