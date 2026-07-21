@@ -53,11 +53,13 @@ export function GamesHub({ seedQuestions }: GamePickerProps) {
     { kind: "flashcards", title: "Flashcard Flip", desc: "Classic flip-through study cards.", icon: <Sparkles className="h-5 w-5" />, tone: "from-blue-500/20 to-cyan-500/20" },
     { kind: "memory", title: "Memory Match", desc: "Match questions to their answers.", icon: <Trophy className="h-5 w-5" />, tone: "from-emerald-500/20 to-teal-500/20" },
     { kind: "bomb", title: "Bomb Blast", desc: "Bank bombs on streaks, then demolish the wall.", icon: <Bomb className="h-5 w-5" />, tone: "from-orange-500/20 to-red-500/20" },
+    { kind: "jumping", title: "Jumping Jacks", desc: "Earn jumps in 60s, then platform through 20 levels.", icon: <Rabbit className="h-5 w-5" />, tone: "from-lime-500/20 to-green-500/20" },
   ];
 
   if (active === "flashcards") return <FlashcardGame questions={questions} onExit={() => setActive(null)} />;
   if (active === "memory") return <MemoryMatchGame questions={questions} onExit={() => setActive(null)} />;
   if (active === "bomb") return <BombBlastGame questions={questions} onExit={() => setActive(null)} />;
+  if (active === "jumping") return <JumpingJacksGame questions={questions} onExit={() => setActive(null)} />;
 
   return (
     <div className="space-y-6">
