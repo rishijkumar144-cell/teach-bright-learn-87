@@ -1111,6 +1111,14 @@ function StaticSpecEditor({ spec, onChange }: { spec: StaticSpec; onChange: (s: 
       return <StaticStemLeafEditor spec={spec} onChange={onChange} />;
     case "coord":
       return <StaticCoordEditor spec={spec} onChange={onChange} />;
+    case "numberline":
+      return <StaticNumberLineEditor spec={spec} onChange={onChange} />;
+    case "grid":
+      return <StaticGridEditor spec={spec} onChange={onChange} />;
+    case "fraction":
+      return <StaticFractionEditor spec={spec} onChange={onChange} />;
+    case "geometry":
+      return <StaticGeometryEditor spec={spec} onChange={onChange} />;
   }
 }
 
