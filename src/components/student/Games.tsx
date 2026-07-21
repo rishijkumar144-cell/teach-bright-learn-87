@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "sonner";
-import { Bomb, Sparkles, RotateCcw, ChevronLeft, ChevronRight, Trophy, Loader2 } from "lucide-react";
+import { Bomb, Sparkles, RotateCcw, ChevronLeft, ChevronRight, Trophy, Loader2, Rabbit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ interface GamePickerProps {
   seedQuestions?: StudyQA[];
 }
 
-type GameKind = "flashcards" | "memory" | "bomb";
+type GameKind = "flashcards" | "memory" | "bomb" | "jumping";
 
 export function GamesHub({ seedQuestions }: GamePickerProps) {
   const [topic, setTopic] = useState("");
@@ -53,11 +53,13 @@ export function GamesHub({ seedQuestions }: GamePickerProps) {
     { kind: "flashcards", title: "Flashcard Flip", desc: "Classic flip-through study cards.", icon: <Sparkles className="h-5 w-5" />, tone: "from-blue-500/20 to-cyan-500/20" },
     { kind: "memory", title: "Memory Match", desc: "Match questions to their answers.", icon: <Trophy className="h-5 w-5" />, tone: "from-emerald-500/20 to-teal-500/20" },
     { kind: "bomb", title: "Bomb Blast", desc: "Bank bombs on streaks, then demolish the wall.", icon: <Bomb className="h-5 w-5" />, tone: "from-orange-500/20 to-red-500/20" },
+    { kind: "jumping", title: "Jumping Jacks", desc: "Earn jumps in 60s, then platform through 20 levels.", icon: <Rabbit className="h-5 w-5" />, tone: "from-lime-500/20 to-green-500/20" },
   ];
 
   if (active === "flashcards") return <FlashcardGame questions={questions} onExit={() => setActive(null)} />;
   if (active === "memory") return <MemoryMatchGame questions={questions} onExit={() => setActive(null)} />;
   if (active === "bomb") return <BombBlastGame questions={questions} onExit={() => setActive(null)} />;
+  if (active === "jumping") return <JumpingJacksGame questions={questions} onExit={() => setActive(null)} />;
 
   return (
     <div className="space-y-6">
@@ -844,6 +846,396 @@ function BombBlastGame({ questions, onExit }: { questions: StudyQA[]; onExit: ()
     </GameShell>
   );
 }
+
+// ============================================================
+// Jumping Jacks — 60s answer round to bank jumps, then 20 platformer levels
+// ============================================================
+const JJ_ANSWER_SECONDS = 60;
+const JJ_WRONG_LOCK_MS = 5000;
+const JJ_TOTAL_LEVELS = 20;
+const JJ_AIRBORNE_TILES = 2; // a jump keeps you airborne for 2 tiles
+
+function mulberry32(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function makeJJLevel(n: number): { track: string; speedMs: number } {
+  const rng = mulberry32(n * 9973 + 7);
+  const length = 18 + Math.min(22, n * 2);
+  const tiles: string[] = new Array(length).fill(".");
+  const targetGaps = Math.min(2 + Math.floor(n / 2), Math.floor(length / 4));
+  let placed = 0;
+  let attempts = 0;
+  while (placed < targetGaps && attempts < 300) {
+    attempts++;
+    const pos = 3 + Math.floor(rng() * (length - 6));
+    // Level 6+ occasionally spawns a size-2 gap (needs precise jump timing)
+    const size = n >= 6 && rng() > 0.55 ? 2 : 1;
+    let ok = true;
+    for (let i = -2; i < size + 2; i++) {
+      const t = tiles[pos + i];
+      if (t === "G") { ok = false; break; }
+    }
+    if (!ok) continue;
+    for (let i = 0; i < size; i++) tiles[pos + i] = "G";
+    placed++;
+  }
+  tiles[length - 1] = "F";
+  tiles[0] = ".";
+  const speedMs = Math.max(140, 340 - n * 10);
+  return { track: tiles.join(""), speedMs };
+}
+
+function JumpingJacksGame({ questions, onExit }: { questions: StudyQA[]; onExit: () => void }) {
+  type Phase = "answer" | "play" | "levelClear" | "fail" | "won";
+  const [phase, setPhase] = useState<Phase>("answer");
+  const [level, setLevel] = useState(1);
+  const [jumps, setJumps] = useState(0);
+  const [bestLevel, setBestLevel] = useState(1);
+
+  // Answer phase state
+  const [idx, setIdx] = useState(0);
+  const [input, setInput] = useState("");
+  const [feedback, setFeedback] = useState<null | "right" | "wrong">(null);
+  const [lockUntil, setLockUntil] = useState(0);
+  const [deadline, setDeadline] = useState(() => Date.now() + JJ_ANSWER_SECONDS * 1000);
+  const [now, setNow] = useState(() => Date.now());
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Play phase state
+  const [track, setTrack] = useState<string>(() => makeJJLevel(1).track);
+  const [speedMs, setSpeedMs] = useState<number>(() => makeJJLevel(1).speedMs);
+  const [pos, setPos] = useState(0);
+  const [airborne, setAirborne] = useState(0);
+  const [failedTile, setFailedTile] = useState<number | null>(null);
+  const posRef = useRef(0);
+  const airRef = useRef(0);
+
+  const q = questions[idx % Math.max(1, questions.length)];
+  const secondsLeft = Math.max(0, Math.ceil((deadline - now) / 1000));
+  const locked = now < lockUntil;
+  const lockSecondsLeft = Math.max(0, Math.ceil((lockUntil - now) / 1000));
+
+  // Answer phase ticker + timeout
+  useEffect(() => {
+    if (phase !== "answer") return;
+    const id = setInterval(() => setNow(Date.now()), 200);
+    return () => clearInterval(id);
+  }, [phase]);
+  useEffect(() => {
+    if (phase === "answer" && secondsLeft === 0) {
+      if (jumps === 0) {
+        // Give one pity jump so the game is not instantly unlosable-loss
+        setJumps(1);
+      }
+      startLevel(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, secondsLeft]);
+
+  const checkAnswer = () => {
+    if (!input.trim() || locked || feedback) return;
+    const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,!?;]$/g, "");
+    const accepted = (q.answers && q.answers.length ? q.answers : [q.a]).filter(Boolean);
+    const inNorm = norm(input);
+    const correct = accepted.some((ans) => {
+      const a = norm(ans);
+      return inNorm === a || (a.includes(inNorm) && inNorm.length >= 3);
+    });
+    if (correct) {
+      sfx.correct();
+      setJumps((j) => j + 1);
+      setFeedback("right");
+      setTimeout(() => {
+        setFeedback(null);
+        setInput("");
+        setIdx((i) => (i + 1) % Math.max(1, questions.length));
+        inputRef.current?.focus();
+      }, 400);
+    } else {
+      sfx.wrong();
+      setFeedback("wrong");
+      setLockUntil(Date.now() + JJ_WRONG_LOCK_MS);
+      setTimeout(() => {
+        setFeedback(null);
+        setInput("");
+        setIdx((i) => (i + 1) % Math.max(1, questions.length));
+      }, JJ_WRONG_LOCK_MS);
+    }
+  };
+
+  const skip = () => {
+    if (locked || feedback) return;
+    setInput("");
+    setIdx((i) => (i + 1) % Math.max(1, questions.length));
+    inputRef.current?.focus();
+  };
+
+  // ---- Play phase ----
+  const startLevel = (lvl: number) => {
+    const built = makeJJLevel(lvl);
+    setLevel(lvl);
+    setTrack(built.track);
+    setSpeedMs(built.speedMs);
+    setPos(0);
+    setAirborne(0);
+    posRef.current = 0;
+    airRef.current = 0;
+    setFailedTile(null);
+    setPhase("play");
+  };
+
+  const jump = () => {
+    if (phase !== "play") return;
+    if (jumps <= 0) return;
+    if (airRef.current > 0) return;
+    sfx.correct();
+    setJumps((j) => j - 1);
+    airRef.current = JJ_AIRBORNE_TILES;
+    setAirborne(JJ_AIRBORNE_TILES);
+  };
+
+
+  // Auto-advance using refs to avoid nested-updater issues in StrictMode
+  useEffect(() => { posRef.current = pos; }, [pos]);
+  useEffect(() => { airRef.current = airborne; }, [airborne]);
+  useEffect(() => {
+    if (phase !== "play") return;
+    const id = setInterval(() => {
+      const nextP = posRef.current + 1;
+      if (nextP >= track.length) { clearInterval(id); return; }
+      const tile = track[nextP];
+      const wasAirborne = airRef.current > 0;
+      const nextA = Math.max(0, airRef.current - 1);
+      posRef.current = nextP;
+      airRef.current = nextA;
+      setPos(nextP);
+      setAirborne(nextA);
+      if (tile === "G" && !wasAirborne) {
+        setFailedTile(nextP);
+        sfx.wrong();
+        clearInterval(id);
+        setTimeout(() => setPhase("fail"), 350);
+      } else if (tile === "F") {
+        sfx.correct();
+        setBestLevel((b) => Math.max(b, level));
+        clearInterval(id);
+        setTimeout(() => {
+          if (level >= JJ_TOTAL_LEVELS) setPhase("won");
+          else setPhase("levelClear");
+        }, 250);
+      }
+    }, speedMs);
+    return () => clearInterval(id);
+  }, [phase, track, speedMs, level]);
+
+
+  // Space to jump
+  useEffect(() => {
+    if (phase !== "play") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.key === " ") {
+        e.preventDefault();
+        jump();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, jumps, airborne]);
+
+  const restartLevel = () => startLevel(level);
+  const nextLevel = () => startLevel(level + 1);
+  const restartGame = () => {
+    setJumps(0);
+    setIdx(0);
+    setInput("");
+    setFeedback(null);
+    setLockUntil(0);
+    setLevel(1);
+    setBestLevel(1);
+    setDeadline(Date.now() + JJ_ANSWER_SECONDS * 1000);
+    setNow(Date.now());
+    setPhase("answer");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  // ---- Render ----
+  if (phase === "won") {
+    return (
+      <GameShell title="Jumping Jacks" onExit={onExit} counter={`🏆 All ${JJ_TOTAL_LEVELS} levels cleared!`}>
+        <div className="mx-auto max-w-md rounded-3xl border-2 border-green-500/40 bg-green-500/10 p-8 text-center">
+          <Trophy className="mx-auto h-12 w-12 text-amber-500" />
+          <h3 className="mt-3 text-2xl font-bold">Legendary hops!</h3>
+          <p className="mt-1 text-sm text-muted-foreground">You cleared all 20 levels. Jumps left: {jumps}.</p>
+          <Button onClick={restartGame} className="mt-4">
+            <RotateCcw className="mr-2 h-4 w-4" /> Play again
+          </Button>
+        </div>
+      </GameShell>
+    );
+  }
+
+  if (phase === "answer") {
+    const timerColor = secondsLeft <= 10 ? "text-red-600 dark:text-red-400" : "text-foreground";
+    return (
+      <GameShell title="Jumping Jacks" onExit={onExit} counter={`Round 1 · 🐰 Jumps: ${jumps}`}>
+        <div className="mx-auto max-w-2xl space-y-4">
+          <div className={cn("flex items-center justify-between rounded-xl border-2 px-4 py-2 text-sm font-bold", secondsLeft <= 10 ? "border-red-500/50 bg-red-500/10" : "border-border bg-muted/40")}>
+            <span className="text-muted-foreground">⏱ Answer round</span>
+            <span className={cn("text-lg tabular-nums", timerColor)}>0:{String(secondsLeft).padStart(2, "0")}</span>
+          </div>
+          <Card className={cn("p-6 transition", feedback === "right" && "border-emerald-500/60 bg-emerald-500/10", feedback === "wrong" && "border-red-500/60 bg-red-500/10")}>
+            <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Question {idx + 1}</div>
+            <div className="mt-2 text-xl font-bold leading-snug">
+              <ParagraphWithMath text={q.q} />
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
+                placeholder={locked ? `Locked · ${lockSecondsLeft}s…` : "Type your answer…"}
+                disabled={feedback !== null || locked}
+                autoFocus
+              />
+              <Button onClick={checkAnswer} disabled={feedback !== null || locked}>Answer</Button>
+              <Button variant="ghost" onClick={skip} disabled={feedback !== null || locked}>Skip</Button>
+            </div>
+            <AnimatePresence>
+              {feedback === "wrong" && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mt-3 rounded-lg bg-background/60 p-3 text-sm">
+                  <span className="font-semibold text-red-600 dark:text-red-400">Not quite — locked {lockSecondsLeft}s.</span>{" "}
+                  <span className="font-semibold">
+                    <ParagraphWithMath text={(q.answers && q.answers.length ? q.answers : [q.a]).join(", ")} />
+                  </span>
+                </motion.div>
+              )}
+              {feedback === "right" && (
+                <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-3 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                  +1 jump! 🐰
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </Card>
+          <p className="text-xs text-muted-foreground">
+            You have 60 seconds. Each correct answer = <strong>+1 jump</strong>. Each wrong locks you out for 5s. When time's up, you'll platform through 20 levels using your banked jumps.
+          </p>
+        </div>
+      </GameShell>
+    );
+  }
+
+  // Platformer render (play / levelClear / fail)
+  const runnerX = Math.min(pos, track.length - 1);
+  const tiles = track.split("");
+  return (
+    <GameShell title="Jumping Jacks" onExit={onExit} counter={`Level ${level}/${JJ_TOTAL_LEVELS} · 🐰 ${jumps} jumps · Best L${bestLevel}`}>
+      <div className="mx-auto max-w-3xl space-y-4">
+        <div className="relative overflow-hidden rounded-2xl border-2 border-border bg-gradient-to-b from-sky-200 to-sky-50 p-4 dark:from-sky-900/40 dark:to-slate-900">
+          <div className="mb-2 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground">
+            <span>Level {level}</span>
+            <span>{tiles.length - runnerX - 1} tiles to go</span>
+          </div>
+          <div
+            className="relative mx-auto grid gap-[3px]"
+            style={{ gridTemplateColumns: `repeat(${tiles.length}, minmax(0, 1fr))`, minHeight: 120 }}
+          >
+            {tiles.map((t, i) => {
+              const isPlayer = i === runnerX;
+              const isGap = t === "G";
+              const isGoal = t === "F";
+              const isFail = failedTile === i;
+              return (
+                <div key={i} className="relative flex flex-col items-center justify-end">
+                  <div className="relative h-14 w-full">
+                    {isPlayer && (
+                      <motion.div
+                        animate={{ y: airborne > 0 ? -34 : 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 18 }}
+                        className="absolute left-1/2 top-2 -translate-x-1/2 text-2xl"
+                      >
+                        {isFail ? "💥" : "🐰"}
+                      </motion.div>
+                    )}
+                  </div>
+                  <div
+                    className={cn(
+                      "h-4 w-full rounded-sm",
+                      isGoal
+                        ? "bg-gradient-to-t from-amber-500 to-yellow-300 ring-2 ring-amber-600"
+                        : isGap
+                          ? "bg-transparent"
+                          : "bg-gradient-to-b from-emerald-500 to-emerald-700",
+                    )}
+                  />
+                  {isGoal && (
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 text-lg">🏁</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {phase === "play" && (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Press <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px]">SPACE</kbd> or tap Jump to leap over gaps. Each jump costs 1 credit and keeps you airborne for {JJ_AIRBORNE_TILES} tiles.
+            </p>
+            <Button size="lg" onClick={jump} disabled={jumps <= 0 || airborne > 0} className="min-w-[140px]">
+              <Rabbit className="mr-2 h-5 w-5" /> Jump ({jumps})
+            </Button>
+          </div>
+        )}
+
+        {phase === "levelClear" && (
+          <div className="mx-auto max-w-md rounded-3xl border-2 border-emerald-500/40 bg-emerald-500/10 p-6 text-center">
+            <Trophy className="mx-auto h-10 w-10 text-emerald-600 dark:text-emerald-400" />
+            <h3 className="mt-2 text-2xl font-bold">Level {level} clear!</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Jumps remaining: <strong>{jumps}</strong>. Next up: level {level + 1}.
+            </p>
+            <Button onClick={nextLevel} className="mt-4">
+              Next level <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+        )}
+
+        {phase === "fail" && (
+          <div className="mx-auto max-w-md rounded-3xl border-2 border-red-500/40 bg-red-500/10 p-6 text-center">
+            <Bomb className="mx-auto h-10 w-10 text-red-600 dark:text-red-400" />
+            <h3 className="mt-2 text-2xl font-bold">Down the gap!</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {jumps > 0
+                ? `You still have ${jumps} jump${jumps === 1 ? "" : "s"}. Restart level ${level} and time it better.`
+                : `You're out of jumps. Time to bank some more.`}
+            </p>
+            <div className="mt-4 flex justify-center gap-2">
+              {jumps > 0 && (
+                <Button onClick={restartLevel}>
+                  <RotateCcw className="mr-2 h-4 w-4" /> Restart level {level}
+                </Button>
+              )}
+              <Button variant={jumps > 0 ? "outline" : "default"} onClick={restartGame}>
+                <RotateCcw className="mr-2 h-4 w-4" /> New answer round
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </GameShell>
+  );
+}
+
 
 // ============================================================
 // Shared shell
