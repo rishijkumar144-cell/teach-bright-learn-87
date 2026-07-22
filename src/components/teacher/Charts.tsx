@@ -931,7 +931,14 @@ export function EdgeSvg({ a, b, edge, sx, sy }: { a: GeoPoint; b: GeoPoint; edge
   }
   return (
     <g>
-      {bulge ? (
+      {edge.circle ? (
+        (() => {
+          const rcx = (x1 + x2) / 2;
+          const rcy = (y1 + y2) / 2;
+          const rr = Math.hypot(x2 - x1, y2 - y1) / 2;
+          return <circle cx={rcx} cy={rcy} r={rr} fill="none" stroke="currentColor" strokeWidth={2} />;
+        })()
+      ) : bulge ? (
         <path d={`M${x1},${y1} Q${cx},${cy} ${x2},${y2}`} fill="none" stroke="currentColor" strokeWidth={2} />
       ) : (
         <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth={2} />
