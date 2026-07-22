@@ -23,6 +23,7 @@ export function newBlockId() {
 interface StoreContext {
   hydrated: boolean;
   authReady: boolean;
+  sessionUserId: string | null;
   teacher: Teacher | null;
   lessons: Lesson[];
   submissions: Submission[];
