@@ -854,11 +854,25 @@ export function GeometrySvg({
   activeId?: string | null;
 }) {
   const W = 480, H = 360;
+  // Adapt vertical padding to the actual point spread so tall/narrow or
+  // wide/short figures still preview at a comfortable aspect ratio.
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const xMin = xs.length ? Math.min(...xs) : 0;
+  const xMax = xs.length ? Math.max(...xs) : 100;
+  const yMin = ys.length ? Math.min(...ys) : 0;
+  const yMax = ys.length ? Math.max(...ys) : 100;
+  const xSpread = Math.max(20, xMax - xMin);
+  const ySpread = Math.max(20, yMax - yMin);
+  const aspect = ySpread / xSpread; // >1 = taller than wide
+  const dynH = Math.round(W * aspect * 0.85);
+  const finalH = Math.max(220, Math.min(560, dynH || H));
   const sx = (x: number) => (x / 100) * W;
-  const sy = (y: number) => (y / 100) * H;
+  const sy = (y: number) => (y / 100) * finalH * (100 / 100);
   const byId = new Map(points.map((p) => [p.id, p] as const));
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full select-none rounded-xl border border-border bg-background">
+    <svg viewBox={`0 0 ${W} ${finalH}`} className="w-full select-none rounded-xl border border-border bg-background">
+
       {edges.map((e, i) => {
         const a = byId.get(e.a), b = byId.get(e.b);
         if (!a || !b) return null;
