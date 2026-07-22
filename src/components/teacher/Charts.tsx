@@ -315,11 +315,17 @@ export function CoordinateGrid({
   overlay?: React.ReactNode;
   height?: number;
 }) {
-  const W = 360;
-  const H = height;
-  const PAD = 24;
   const xSpan = Math.max(0.001, xMax - xMin);
   const ySpan = Math.max(0.001, yMax - yMin);
+  const PAD = 24;
+  const W = 360;
+  // Adapt the plotting area so grid cells stay roughly square regardless of
+  // domain aspect ratio. Falls back to `height` prop only when a caller
+  // explicitly overrides the default.
+  const innerW = W - PAD * 2;
+  const autoInnerH = innerW * (ySpan / xSpan);
+  const autoH = Math.max(200, Math.min(720, Math.round(autoInnerH + PAD * 2)));
+  const H = height === 320 ? autoH : height;
   const sx = (x: number) => PAD + ((x - xMin) / xSpan) * (W - PAD * 2);
   const sy = (y: number) => H - PAD - ((y - yMin) / ySpan) * (H - PAD * 2);
 

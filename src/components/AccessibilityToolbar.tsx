@@ -4,6 +4,7 @@ import {
   Accessibility,
   Moon,
   Sun,
+  Sparkles,
   Type,
   ALargeSmall,
   Baseline,
@@ -17,10 +18,11 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { isMuted, setMuted, sfx } from "@/lib/sfx";
 
-const KEY = "mathly.a11y.v1";
+const KEY = "questly.a11y.v1";
 
 interface A11yPrefs {
   theme: "light" | "dark";
+  mode: "classic" | "space";
   dyslexiaFont: boolean;
   textScale: number; // 90 - 150
   lineSpacing: number; // 1.4 - 2.2
@@ -29,6 +31,7 @@ interface A11yPrefs {
 
 const DEFAULTS: A11yPrefs = {
   theme: "light",
+  mode: "classic",
   dyslexiaFont: false,
   textScale: 100,
   lineSpacing: 1.6,
@@ -43,6 +46,7 @@ function apply(prefs: A11yPrefs) {
   body?.classList.toggle("dyslexia-font", prefs.dyslexiaFont);
   body?.classList.remove("focus-mode");
   body?.classList.toggle("high-contrast", prefs.highContrast);
+  body?.classList.toggle("space", prefs.mode === "space");
   root.style.setProperty("--reader-scale", `${prefs.textScale / 100}`);
   root.style.setProperty("--reader-line", `${prefs.lineSpacing}`);
 }
@@ -129,6 +133,21 @@ export function AccessibilityToolbar() {
               </motion.span>
             )}
           </AnimatePresence>
+        </Button>
+        <div className="h-5 w-px bg-border" />
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={prefs.mode === "space" ? "Switch to classic mode" : "Switch to space mode"}
+          aria-pressed={prefs.mode === "space"}
+          data-sfx="off"
+          onClick={() => {
+            sfx.toggle();
+            patch({ mode: prefs.mode === "space" ? "classic" : "space" });
+          }}
+          className={`h-9 w-9 rounded-full ${prefs.mode === "space" ? "text-primary" : ""}`}
+        >
+          <Sparkles className="h-4 w-4" />
         </Button>
         <div className="h-5 w-px bg-border" />
         <SoundToggleButton />

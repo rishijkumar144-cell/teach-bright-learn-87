@@ -198,6 +198,82 @@ body.high-contrast.dark,
   --border: oklch(0.75 0 0);
 }
 
+/* Space theme — cosmic aesthetic layered on top of light/dark */
+body.space {
+  --background: oklch(0.96 0.02 260);
+  --foreground: oklch(0.22 0.05 280);
+  --card: oklch(0.99 0.01 260);
+  --card-foreground: oklch(0.22 0.05 280);
+  --popover: oklch(0.99 0.01 260);
+  --popover-foreground: oklch(0.22 0.05 280);
+  --primary: oklch(0.55 0.22 285);
+  --primary-foreground: oklch(0.99 0.01 260);
+  --secondary: oklch(0.93 0.03 265);
+  --secondary-foreground: oklch(0.28 0.06 280);
+  --muted: oklch(0.94 0.02 260);
+  --muted-foreground: oklch(0.5 0.05 275);
+  --accent: oklch(0.9 0.08 300);
+  --accent-foreground: oklch(0.28 0.1 285);
+  --border: oklch(0.88 0.03 265);
+  --input: oklch(0.9 0.03 265);
+  --ring: oklch(0.6 0.2 290);
+  --brand: oklch(0.55 0.22 285);
+  --brand-foreground: oklch(0.99 0.01 260);
+  --sidebar: oklch(0.97 0.02 260);
+  --sidebar-foreground: oklch(0.22 0.05 280);
+  --sidebar-primary: oklch(0.55 0.22 285);
+  --sidebar-primary-foreground: oklch(0.99 0.01 260);
+  --sidebar-accent: oklch(0.9 0.08 300);
+  --sidebar-accent-foreground: oklch(0.28 0.1 285);
+  --sidebar-border: oklch(0.88 0.03 265);
+  --sidebar-ring: oklch(0.6 0.2 290);
+  background-image:
+    radial-gradient(circle at 15% 20%, oklch(0.85 0.12 300 / 0.35) 0, transparent 40%),
+    radial-gradient(circle at 85% 80%, oklch(0.85 0.14 240 / 0.35) 0, transparent 45%);
+  background-attachment: fixed;
+}
+
+body.space.dark,
+.dark body.space {
+  --background: oklch(0.14 0.04 275);
+  --foreground: oklch(0.97 0.02 260);
+  --card: oklch(0.2 0.05 280);
+  --card-foreground: oklch(0.97 0.02 260);
+  --popover: oklch(0.2 0.05 280);
+  --popover-foreground: oklch(0.97 0.02 260);
+  --primary: oklch(0.78 0.18 300);
+  --primary-foreground: oklch(0.14 0.04 275);
+  --secondary: oklch(0.25 0.06 280);
+  --secondary-foreground: oklch(0.97 0.02 260);
+  --muted: oklch(0.24 0.05 280);
+  --muted-foreground: oklch(0.78 0.04 270);
+  --accent: oklch(0.32 0.1 300);
+  --accent-foreground: oklch(0.97 0.02 260);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.75 0.2 295);
+  --brand: oklch(0.78 0.18 300);
+  --brand-foreground: oklch(0.14 0.04 275);
+  --sidebar: oklch(0.18 0.05 280);
+  --sidebar-foreground: oklch(0.97 0.02 260);
+  --sidebar-primary: oklch(0.78 0.18 300);
+  --sidebar-primary-foreground: oklch(0.14 0.04 275);
+  --sidebar-accent: oklch(0.32 0.1 300);
+  --sidebar-accent-foreground: oklch(0.97 0.02 260);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.75 0.2 295);
+  background-image:
+    radial-gradient(circle at 20% 15%, oklch(0.55 0.2 300 / 0.4) 0, transparent 40%),
+    radial-gradient(circle at 80% 85%, oklch(0.5 0.22 240 / 0.4) 0, transparent 45%),
+    radial-gradient(1px 1px at 20% 30%, white 50%, transparent 51%),
+    radial-gradient(1px 1px at 70% 60%, white 50%, transparent 51%),
+    radial-gradient(1px 1px at 40% 80%, white 50%, transparent 51%),
+    radial-gradient(1px 1px at 85% 25%, white 50%, transparent 51%),
+    radial-gradient(1px 1px at 55% 15%, white 50%, transparent 51%);
+  background-attachment: fixed;
+  background-size: 100% 100%, 100% 100%, 200px 200px, 300px 300px, 250px 250px, 350px 350px, 280px 280px;
+}
+
 @utility card-soft {
   background-color: var(--color-card);
   border: 1px solid var(--color-border);

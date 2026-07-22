@@ -83,23 +83,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Mathly — Accessible Math Lessons for Every Learner" },
+      { title: "Questly — Accessible Math Lessons for Every Learner" },
       {
         name: "description",
         content:
-          "Mathly is the teacher portal for building interactive, accessible math lessons for students with ADHD, dyslexia, and every learning style.",
+          "Questly is the teacher portal for building interactive, accessible math lessons for students with ADHD, dyslexia, and every learning style.",
       },
-      { name: "author", content: "Mathly" },
-      { property: "og:title", content: "Mathly — Accessible Math Lessons for Every Learner" },
+      { name: "author", content: "Questly" },
+      { property: "og:title", content: "Questly — Accessible Math Lessons for Every Learner" },
       {
         property: "og:description",
         content:
-          "Mathly is the teacher portal for building interactive, accessible math lessons for students with ADHD, dyslexia, and every learning style.",
+          "Questly is the teacher portal for building interactive, accessible math lessons for students with ADHD, dyslexia, and every learning style.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Mathly — Accessible Math Lessons for Every Learner" },
-      { name: "twitter:description", content: "Mathly is the teacher portal for building interactive, accessible math lessons for students with ADHD, dyslexia, and every learning style." },
+      { name: "twitter:title", content: "Questly — Accessible Math Lessons for Every Learner" },
+      { name: "twitter:description", content: "Questly is the teacher portal for building interactive, accessible math lessons for students with ADHD, dyslexia, and every learning style." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a7f2f933-5467-42a0-98e8-b3e984a3d4f8/id-preview-a1748aaf--0b208737-8b70-47f9-a33f-af7ad4da7589.lovable.app-1784295612431.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a7f2f933-5467-42a0-98e8-b3e984a3d4f8/id-preview-a1748aaf--0b208737-8b70-47f9-a33f-af7ad4da7589.lovable.app-1784295612431.png" },
     ],

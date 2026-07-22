@@ -146,7 +146,7 @@ function StudentLessonView() {
               <ArrowLeft className="h-3 w-3" /> Portal
             </Link>
           )}
-          <span className="inline-flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5" /> Mathly</span>
+          <span className="inline-flex items-center gap-1.5"><GraduationCap className="h-3.5 w-3.5" /> Questly</span>
         </div>
       }
     />

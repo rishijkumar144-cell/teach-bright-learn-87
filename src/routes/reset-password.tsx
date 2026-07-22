@@ -65,7 +65,7 @@ function ResetPasswordPage() {
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground">
             <GraduationCap className="h-5 w-5" />
           </div>
-          <span className="text-lg font-bold">Mathly</span>
+          <span className="text-lg font-bold">Questly</span>
         </div>
         <h2 className="text-3xl font-bold tracking-tight">Set a new password</h2>
         <p className="mt-2 text-muted-foreground">

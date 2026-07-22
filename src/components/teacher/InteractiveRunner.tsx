@@ -374,7 +374,7 @@ function CoordWidget({
   const [scratch, setScratch] = useState<Array<{ x: number; y: number }>>([]);
   const [shadeAbove, setShadeAbove] = useState(true);
   const [shadeStrict, setShadeStrict] = useState(false);
-  const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3, halfplane: 2 };
+  const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, circle2: 2, ellipse: 3, hyperbola: 3, halfplane: 2 };
 
   const onClick = (x: number, y: number) => {
     if (disabled) return;
@@ -387,9 +387,16 @@ function CoordWidget({
       case "line": shape = { type: "line", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y }; break;
       case "parabola": shape = { type: "parabola", hx: n[0].x, hy: n[0].y, px: n[1].x, py: n[1].y }; break;
       case "circle": shape = { type: "circle", cx: n[0].x, cy: n[0].y, rx: n[1].x, ry: n[1].y }; break;
+      case "circle2": {
+        const cx = (n[0].x + n[1].x) / 2;
+        const cy = (n[0].y + n[1].y) / 2;
+        shape = { type: "circle", cx, cy, rx: n[0].x, ry: n[0].y };
+        break;
+      }
       case "ellipse": shape = { type: "ellipse", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }; break;
       case "hyperbola": shape = { type: "hyperbola", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }; break;
       case "halfplane": shape = { type: "halfplane", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y, above: shadeAbove, strict: shadeStrict }; break;
+      default: return;
     }
     onChange([...shapes, shape]);
   };
@@ -417,6 +424,13 @@ function CoordWidget({
         "Click any point on the edge — the distance to the center becomes the radius.",
       ],
       tip: "All points on a circle are the same distance (radius) from the center.",
+    },
+    circle2: {
+      steps: [
+        "Click one end of the diameter.",
+        "Click the opposite end — the two points define the diameter of the circle.",
+      ],
+      tip: "The center of the circle is the midpoint of the diameter, and the radius is half the diameter's length.",
     },
     ellipse: {
       steps: [
@@ -458,7 +472,7 @@ function CoordWidget({
             onClick={() => { setTool(t); setScratch([]); }}
             className={cn("rounded-md border px-2 py-1 text-xs capitalize", tool === t ? "border-primary bg-primary/10 text-primary" : "border-border")}
           >
-            {t}
+            {t === "halfplane" ? "shade" : t === "circle2" ? "circle (diameter)" : t}
           </button>
         ))}
         <Button size="sm" variant="ghost" disabled={disabled || shapes.length === 0} onClick={() => { onChange([]); setScratch([]); }}>

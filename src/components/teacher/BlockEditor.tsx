@@ -1429,7 +1429,7 @@ function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kin
   const addShape = (s: DrawShape) => onChange({ ...spec, shapes: [...spec.shapes, s] });
 
   const onClick = (x: number, y: number) => {
-    const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3, halfplane: 2 };
+    const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, circle2: 2, ellipse: 3, hyperbola: 3, halfplane: 2 };
     const n = [...scratch, { x, y }];
     if (n.length < need[tool]) { setScratch(n); return; }
     setScratch([]);
@@ -1438,6 +1438,12 @@ function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kin
       case "line": addShape({ type: "line", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y }); break;
       case "parabola": addShape({ type: "parabola", hx: n[0].x, hy: n[0].y, px: n[1].x, py: n[1].y }); break;
       case "circle": addShape({ type: "circle", cx: n[0].x, cy: n[0].y, rx: n[1].x, ry: n[1].y }); break;
+      case "circle2": {
+        const cx = (n[0].x + n[1].x) / 2;
+        const cy = (n[0].y + n[1].y) / 2;
+        addShape({ type: "circle", cx, cy, rx: n[0].x, ry: n[0].y });
+        break;
+      }
       case "ellipse": addShape({ type: "ellipse", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }); break;
       case "hyperbola": addShape({ type: "hyperbola", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }); break;
       case "halfplane": addShape({ type: "halfplane", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y, above: shadeAbove, strict: shadeStrict }); break;
@@ -1453,14 +1459,14 @@ function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kin
         ))}
       </div>
       <div className="flex flex-wrap gap-2">
-        {(["point", "line", "parabola", "circle", "ellipse", "hyperbola", "halfplane"] as ToolKind[]).map((t) => (
+        {(["point", "line", "parabola", "circle", "circle2", "ellipse", "hyperbola", "halfplane"] as ToolKind[]).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => { setTool(t); setScratch([]); }}
             className={cn("rounded-md border px-2 py-1 text-xs capitalize", tool === t ? "border-primary bg-primary/10 text-primary" : "border-border")}
           >
-            {t === "halfplane" ? "shade (inequality)" : t}
+            {t === "halfplane" ? "shade (inequality)" : t === "circle2" ? "circle (diameter)" : t}
           </button>
         ))}
         <Button variant="outline" size="sm" onClick={() => { onChange({ ...spec, shapes: [] }); setScratch([]); }}><Trash2 className="h-4 w-4" /> Clear</Button>
@@ -1478,7 +1484,7 @@ function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kin
       <p className="text-xs text-muted-foreground">
         {tool === "halfplane"
           ? `Click 2 points to define the boundary line, then the ${shadeAbove ? "above/right" : "below/left"} side shades in (${scratch.length}/2).`
-          : `Click on the grid to add ${tool} (${scratch.length}/${({ point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3, halfplane: 2 } as Record<ToolKind, number>)[tool]} points).`}
+          : `Click on the grid to add ${tool} (${scratch.length}/${({ point: 1, line: 2, parabola: 2, circle: 2, circle2: 2, ellipse: 3, hyperbola: 3, halfplane: 2 } as Record<ToolKind, number>)[tool]} points).`}
       </p>
       <CoordinateGrid xMin={spec.xMin} xMax={spec.xMax} yMin={spec.yMin} yMax={spec.yMax} shapes={spec.shapes} onClick={onClick} />
     </div>
@@ -1672,7 +1678,7 @@ function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onCh
           </div>
           <Label className="text-xs">Tools students can use</Label>
           <div className="flex flex-wrap gap-2">
-            {(["point", "line", "parabola", "circle", "ellipse", "hyperbola", "halfplane"] as ToolKind[]).map((t) => {
+            {(["point", "line", "parabola", "circle", "circle2", "ellipse", "hyperbola", "halfplane"] as ToolKind[]).map((t) => {
               const on = spec.tools.includes(t);
               return (
                 <button
@@ -1681,7 +1687,7 @@ function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onCh
                   onClick={() => onChange({ ...spec, tools: on ? spec.tools.filter((x) => x !== t) : [...spec.tools, t] })}
                   className={cn("rounded-md border px-2 py-1 text-xs capitalize", on ? "border-primary bg-primary/10 text-primary" : "border-border")}
                 >
-                  {t === "halfplane" ? "shade" : t}
+                  {t === "halfplane" ? "shade" : t === "circle2" ? "circle (diameter)" : t}
 
                 </button>
               );
