@@ -37,21 +37,23 @@ export const Route = createFileRoute("/student")({
 });
 
 function StudentPortal() {
-  const { teacher, authReady, submissions, logout } = useStore();
+  const { teacher, authReady, sessionUserId, submissions, logout } = useStore();
   const navigate = useNavigate();
+  const profileLoading = !!sessionUserId && !teacher;
 
   useEffect(() => {
-    if (authReady && !teacher) navigate({ to: "/login" });
+    if (authReady && !sessionUserId) navigate({ to: "/login" });
     if (authReady && teacher && teacher.role !== "student") navigate({ to: "/dashboard" });
-  }, [authReady, teacher, navigate]);
+  }, [authReady, teacher, sessionUserId, navigate]);
 
-  if (!authReady || !teacher || teacher.role !== "student") {
+  if (!authReady || profileLoading || !teacher || teacher.role !== "student") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
+
 
   const initials = teacher.displayName
     .split(" ")

@@ -23,6 +23,7 @@ export function newBlockId() {
 interface StoreContext {
   hydrated: boolean;
   authReady: boolean;
+  sessionUserId: string | null;
   teacher: Teacher | null;
   lessons: Lesson[];
   submissions: Submission[];
@@ -54,6 +55,7 @@ const Ctx = createContext<StoreContext | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [authReady, setAuthReady] = useState(false);
@@ -114,11 +116,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setHydrated(true);
 
-    // Set up listener BEFORE getting session
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user;
+      setSessionUserId(user?.id ?? null);
       if (user) {
-        // Defer async work
         setTimeout(() => {
           loadProfile(user.id, user.email ?? "");
           refreshLessons();
@@ -134,6 +135,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const user = session?.user;
+      setSessionUserId(user?.id ?? null);
       if (user) {
         loadProfile(user.id, user.email ?? "");
         refreshLessons();
@@ -307,6 +309,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       hydrated,
       authReady,
+      sessionUserId,
       teacher,
       lessons,
       submissions,
@@ -329,6 +332,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [
       hydrated,
       authReady,
+      sessionUserId,
       teacher,
       lessons,
       submissions,
