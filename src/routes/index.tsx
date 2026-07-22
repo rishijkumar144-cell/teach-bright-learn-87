@@ -6,8 +6,10 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { teacher, authReady } = useStore();
-  if (!authReady) {
+  const { teacher, authReady, sessionUserId } = useStore();
+  // Wait while auth check is pending OR a session exists but the teacher
+  // profile hasn't loaded yet (fixes the "log in twice" bounce back to /login).
+  if (!authReady || (sessionUserId && !teacher)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
