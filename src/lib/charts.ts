@@ -102,6 +102,7 @@ export interface GeoEdge {
   parallel?: number;
   tick?: number;
   curve?: number; // bulge in svg-space px; 0/undefined = straight
+  circle?: boolean; // render a circle using a-b as diameter
 }
 
 
