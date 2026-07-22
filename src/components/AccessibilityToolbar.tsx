@@ -135,6 +135,21 @@ export function AccessibilityToolbar() {
           </AnimatePresence>
         </Button>
         <div className="h-5 w-px bg-border" />
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={prefs.mode === "space" ? "Switch to classic mode" : "Switch to space mode"}
+          aria-pressed={prefs.mode === "space"}
+          data-sfx="off"
+          onClick={() => {
+            sfx.toggle();
+            patch({ mode: prefs.mode === "space" ? "classic" : "space" });
+          }}
+          className={`h-9 w-9 rounded-full ${prefs.mode === "space" ? "text-primary" : ""}`}
+        >
+          <Sparkles className="h-4 w-4" />
+        </Button>
+        <div className="h-5 w-px bg-border" />
         <SoundToggleButton />
         <div className="h-5 w-px bg-border" />
         <Button
