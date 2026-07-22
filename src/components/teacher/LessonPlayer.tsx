@@ -350,12 +350,20 @@ function BlockRender({
   const revealed = submitted && reveal;
   switch (block.type) {
     case "heading":
-      return <h2 className="text-2xl font-bold tracking-tight">{d.text}</h2>;
+      return (
+        <div className="flex items-start gap-2">
+          <h2 className="flex-1 text-2xl font-bold tracking-tight">{d.text}</h2>
+          {d.text && <SpeakButton text={d.text} />}
+        </div>
+      );
     case "paragraph":
       return (
-        <p className="text-lg leading-relaxed">
-          <ParagraphWithMath text={d.text ?? ""} />
-        </p>
+        <div className="flex items-start gap-2">
+          <p className="flex-1 text-lg leading-relaxed">
+            <ParagraphWithMath text={d.text ?? ""} />
+          </p>
+          {d.text && <SpeakButton text={d.text} className="mt-1" />}
+        </div>
       );
     case "summary":
       return (
