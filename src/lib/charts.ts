@@ -7,6 +7,7 @@ export type ToolKind =
   | "line"
   | "parabola"
   | "circle"
+  | "circle2"
   | "ellipse"
   | "hyperbola"
   | "halfplane";
