@@ -1466,7 +1466,7 @@ function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kin
             onClick={() => { setTool(t); setScratch([]); }}
             className={cn("rounded-md border px-2 py-1 text-xs capitalize", tool === t ? "border-primary bg-primary/10 text-primary" : "border-border")}
           >
-            {t === "halfplane" ? "shade (inequality)" : t}
+            {t === "halfplane" ? "shade (inequality)" : t === "circle2" ? "circle (diameter)" : t}
           </button>
         ))}
         <Button variant="outline" size="sm" onClick={() => { onChange({ ...spec, shapes: [] }); setScratch([]); }}><Trash2 className="h-4 w-4" /> Clear</Button>
@@ -1687,7 +1687,7 @@ function InteractiveSpecEditor({ spec, onChange }: { spec: InteractiveSpec; onCh
                   onClick={() => onChange({ ...spec, tools: on ? spec.tools.filter((x) => x !== t) : [...spec.tools, t] })}
                   className={cn("rounded-md border px-2 py-1 text-xs capitalize", on ? "border-primary bg-primary/10 text-primary" : "border-border")}
                 >
-                  {t === "halfplane" ? "shade" : t}
+                  {t === "halfplane" ? "shade" : t === "circle2" ? "circle (diameter)" : t}
 
                 </button>
               );
