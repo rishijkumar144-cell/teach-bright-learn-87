@@ -425,6 +425,13 @@ function CoordWidget({
       ],
       tip: "All points on a circle are the same distance (radius) from the center.",
     },
+    circle2: {
+      steps: [
+        "Click one end of the diameter.",
+        "Click the opposite end — the two points define the diameter of the circle.",
+      ],
+      tip: "The center of the circle is the midpoint of the diameter, and the radius is half the diameter's length.",
+    },
     ellipse: {
       steps: [
         "Click the center of the ellipse.",
