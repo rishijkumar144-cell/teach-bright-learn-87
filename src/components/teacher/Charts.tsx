@@ -207,7 +207,7 @@ function LineChart({ spec }: { spec: Extract<StaticSpec, { kind: "line" }> }) {
   const path = pts.map((p, i) => `${i === 0 ? "M" : "L"}${sx(p.x)},${sy(p.y)}`).join(" ");
   return (
     <ChartFrame title={spec.title}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-muted-foreground">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible text-muted-foreground">
         <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke={CHART_STROKE} />
         <line x1={PAD} y1={PAD} x2={PAD} y2={H - PAD} stroke={CHART_STROKE} />
         <path d={path} fill="none" stroke="var(--primary)" strokeWidth={2} />
@@ -242,7 +242,7 @@ function LinePlot({ spec }: { spec: Extract<StaticSpec, { kind: "lineplot" }> })
   for (let i = min; i <= max; i++) ticks.push(i);
   return (
     <ChartFrame title={spec.title}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-muted-foreground">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible text-muted-foreground">
         <line x1={PAD} y1={H - 40} x2={W - PAD} y2={H - 40} stroke={CHART_STROKE} strokeWidth={1.5} />
         {ticks.map((t) => {
           const x = PAD + (t - min) * step;
@@ -701,7 +701,7 @@ export function NumberLineSvg({ spec }: { spec: Extract<StaticSpec, { kind: "num
   const ticks: number[] = [];
   for (let v = spec.min; v <= spec.max + 1e-9; v += step) ticks.push(Math.round(v * 1e6) / 1e6);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full text-muted-foreground">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible text-muted-foreground">
       <defs>
         <marker id="nl-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
           <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
@@ -778,7 +778,7 @@ function BlankGrid({ spec }: { spec: Extract<StaticSpec, { kind: "grid" }> }) {
   }
   return (
     <ChartFrame title={spec.title}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full overflow-visible">
         {lines}
         {spec.showAxes && spec.style === "square" && (
           <>
@@ -871,7 +871,7 @@ export function GeometrySvg({
   const sy = (y: number) => (y / 100) * finalH * (100 / 100);
   const byId = new Map(points.map((p) => [p.id, p] as const));
   return (
-    <svg viewBox={`0 0 ${W} ${finalH}`} className="w-full select-none rounded-xl border border-border bg-background">
+    <svg viewBox={`0 0 ${W} ${finalH}`} className="w-full overflow-visible select-none rounded-xl border border-border bg-background">
 
       {edges.map((e, i) => {
         const a = byId.get(e.a), b = byId.get(e.b);
