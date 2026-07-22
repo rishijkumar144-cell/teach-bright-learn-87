@@ -55,6 +55,7 @@ const Ctx = createContext<StoreContext | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [authReady, setAuthReady] = useState(false);
