@@ -116,11 +116,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setHydrated(true);
 
-    // Set up listener BEFORE getting session
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user;
+      setSessionUserId(user?.id ?? null);
       if (user) {
-        // Defer async work
         setTimeout(() => {
           loadProfile(user.id, user.email ?? "");
           refreshLessons();
@@ -136,6 +135,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       const user = session?.user;
+      setSessionUserId(user?.id ?? null);
       if (user) {
         loadProfile(user.id, user.email ?? "");
         refreshLessons();
