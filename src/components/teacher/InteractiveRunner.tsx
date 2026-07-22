@@ -374,7 +374,7 @@ function CoordWidget({
   const [scratch, setScratch] = useState<Array<{ x: number; y: number }>>([]);
   const [shadeAbove, setShadeAbove] = useState(true);
   const [shadeStrict, setShadeStrict] = useState(false);
-  const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, ellipse: 3, hyperbola: 3, halfplane: 2 };
+  const need: Record<ToolKind, number> = { point: 1, line: 2, parabola: 2, circle: 2, circle2: 2, ellipse: 3, hyperbola: 3, halfplane: 2 };
 
   const onClick = (x: number, y: number) => {
     if (disabled) return;
@@ -387,9 +387,16 @@ function CoordWidget({
       case "line": shape = { type: "line", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y }; break;
       case "parabola": shape = { type: "parabola", hx: n[0].x, hy: n[0].y, px: n[1].x, py: n[1].y }; break;
       case "circle": shape = { type: "circle", cx: n[0].x, cy: n[0].y, rx: n[1].x, ry: n[1].y }; break;
+      case "circle2": {
+        const cx = (n[0].x + n[1].x) / 2;
+        const cy = (n[0].y + n[1].y) / 2;
+        shape = { type: "circle", cx, cy, rx: n[0].x, ry: n[0].y };
+        break;
+      }
       case "ellipse": shape = { type: "ellipse", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }; break;
       case "hyperbola": shape = { type: "hyperbola", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }; break;
       case "halfplane": shape = { type: "halfplane", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y, above: shadeAbove, strict: shadeStrict }; break;
+      default: return;
     }
     onChange([...shapes, shape]);
   };
