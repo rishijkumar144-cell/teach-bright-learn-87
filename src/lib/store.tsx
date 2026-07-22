@@ -332,6 +332,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [
       hydrated,
       authReady,
+      sessionUserId,
       teacher,
       lessons,
       submissions,
