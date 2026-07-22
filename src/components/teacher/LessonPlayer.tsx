@@ -718,7 +718,9 @@ function BlockRender({
       }
       return (
         <div className="space-y-2">
-          <StaticChart spec={spec} />
+          <div className="w-full overflow-x-auto">
+            <StaticChart spec={spec} />
+          </div>
           {d.caption && (
             <p className="text-sm text-muted-foreground">{d.caption as string}</p>
           )}
