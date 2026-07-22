@@ -603,8 +603,8 @@ function FillImageWidget({
   }
   return (
     <div className="space-y-3">
-      <div className="relative inline-block overflow-hidden rounded-xl border border-border">
-        <img src={spec.imageUrl} alt="" className="max-h-96 w-auto" />
+      <div className="relative inline-block w-full overflow-hidden rounded-xl border border-border">
+        <img src={spec.imageUrl} alt="" className="block h-auto w-full" />
         {spec.pins.map((p, i) => {
           const filled = !!(answers[p.id] ?? "").trim();
           return (

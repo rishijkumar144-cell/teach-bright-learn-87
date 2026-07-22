@@ -17,6 +17,7 @@ import type { InteractiveSpec, StaticSpec } from "@/lib/charts";
 import { interactiveComplete } from "@/lib/charts";
 import { cn } from "@/lib/utils";
 import { sfx } from "@/lib/sfx";
+import { SpeakButton } from "@/components/SpeakButton";
 
 const QUESTION_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
 const SUBMITTABLE_TYPES = new Set(["mcq", "checkbox", "truefalse", "short", "numeric", "open", "interactive"]);
@@ -349,12 +350,20 @@ function BlockRender({
   const revealed = submitted && reveal;
   switch (block.type) {
     case "heading":
-      return <h2 className="text-2xl font-bold tracking-tight">{d.text}</h2>;
+      return (
+        <div className="flex items-start gap-2">
+          <h2 className="flex-1 text-2xl font-bold tracking-tight">{d.text}</h2>
+          {d.text && <SpeakButton text={d.text} />}
+        </div>
+      );
     case "paragraph":
       return (
-        <p className="text-lg leading-relaxed">
-          <ParagraphWithMath text={d.text ?? ""} />
-        </p>
+        <div className="flex items-start gap-2">
+          <p className="flex-1 text-lg leading-relaxed">
+            <ParagraphWithMath text={d.text ?? ""} />
+          </p>
+          {d.text && <SpeakButton text={d.text} className="mt-1" />}
+        </div>
       );
     case "summary":
       return (
@@ -709,7 +718,9 @@ function BlockRender({
       }
       return (
         <div className="space-y-2">
-          <StaticChart spec={spec} />
+          <div className="w-full overflow-x-auto">
+            <StaticChart spec={spec} />
+          </div>
           {d.caption && (
             <p className="text-sm text-muted-foreground">{d.caption as string}</p>
           )}
@@ -774,15 +785,18 @@ function QuestionCard({
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-lg font-medium">
+        <p className="flex-1 text-lg font-medium">
           {question}
           {required && <span className="ml-1 text-destructive" aria-label="required">*</span>}
         </p>
-        {required && (
-          <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
-            Required
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {question && <SpeakButton text={question} />}
+          {required && (
+            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
+              Required
+            </span>
+          )}
+        </div>
       </div>
       <div className="mt-4">{children}</div>
       {footer}
