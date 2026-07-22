@@ -82,7 +82,7 @@ function LoginPage() {
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/15 backdrop-blur">
               <GraduationCap className="h-5 w-5" />
             </div>
-            Mathly
+            Questly
           </div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -112,7 +112,7 @@ function LoginPage() {
             </div>
           </motion.div>
           <div className="text-xs text-primary-foreground/60">
-            © {new Date().getFullYear()} Mathly. Made for teachers.
+            © {new Date().getFullYear()} Questly. Made for teachers.
           </div>
         </div>
       </div>
@@ -127,11 +127,11 @@ function LoginPage() {
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-primary-foreground">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <span className="text-lg font-bold">Mathly</span>
+            <span className="text-lg font-bold">Questly</span>
           </div>
           <h2 className="text-3xl font-bold tracking-tight">
             {mode === "signin"
-              ? "Sign in to Mathly"
+              ? "Sign in to Questly"
               : mode === "signup"
                 ? role === "student"
                   ? "Create your student account"
@@ -249,7 +249,7 @@ function LoginPage() {
               </button>
             ) : (
               <p className="text-center text-sm text-muted-foreground">
-                {mode === "signin" ? "New to Mathly? " : "Already have an account? "}
+                {mode === "signin" ? "New to Questly? " : "Already have an account? "}
                 <button
                   type="button"
                   onClick={() => setMode(mode === "signin" ? "signup" : "signin")}

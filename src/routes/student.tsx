@@ -68,7 +68,7 @@ function StudentPortal() {
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <span>Mathly <span className="font-normal text-muted-foreground">· Student</span></span>
+            <span>Questly <span className="font-normal text-muted-foreground">· Student</span></span>
           </Link>
           <div className="flex items-center gap-3">
             <div className="hidden text-right sm:block">

@@ -71,7 +71,7 @@ export function TeacherLayout({
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-soft">
               <GraduationCap className="h-4.5 w-4.5" />
             </div>
-            <span className="text-lg font-bold tracking-tight">Mathly</span>
+            <span className="text-lg font-bold tracking-tight">Questly</span>
           </Link>
 
           <nav className="ml-6 hidden items-center gap-1 md:flex">

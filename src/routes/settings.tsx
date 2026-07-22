@@ -63,7 +63,7 @@ function SettingsPage() {
           <CardContent className="p-6 space-y-3">
             <h2 className="text-lg font-semibold">Accessibility promise</h2>
             <p className="text-sm text-muted-foreground">
-              Mathly is built with WCAG-compliant contrast, large hit targets, full keyboard
+              Questly is built with WCAG-compliant contrast, large hit targets, full keyboard
               navigation, and support for assistive technologies. Use the toolbar at the top of
               every page to switch theme, enable a dyslexia-friendly font, boost contrast, and
               adjust text size and line spacing — for you and your students.
