@@ -1438,6 +1438,12 @@ function StaticCoordEditor({ spec, onChange }: { spec: Extract<StaticSpec, { kin
       case "line": addShape({ type: "line", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y }); break;
       case "parabola": addShape({ type: "parabola", hx: n[0].x, hy: n[0].y, px: n[1].x, py: n[1].y }); break;
       case "circle": addShape({ type: "circle", cx: n[0].x, cy: n[0].y, rx: n[1].x, ry: n[1].y }); break;
+      case "circle2": {
+        const cx = (n[0].x + n[1].x) / 2;
+        const cy = (n[0].y + n[1].y) / 2;
+        addShape({ type: "circle", cx, cy, rx: n[0].x, ry: n[0].y });
+        break;
+      }
       case "ellipse": addShape({ type: "ellipse", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }); break;
       case "hyperbola": addShape({ type: "hyperbola", cx: n[0].x, cy: n[0].y, ax: n[1].x, ay: n[1].y, bx: n[2].x, by: n[2].y }); break;
       case "halfplane": addShape({ type: "halfplane", x1: n[0].x, y1: n[0].y, x2: n[1].x, y2: n[1].y, above: shadeAbove, strict: shadeStrict }); break;
