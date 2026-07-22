@@ -371,7 +371,7 @@ export function CoordinateGrid({
   return (
     <svg
       viewBox={`0 0 ${W} ${H}`}
-      className={`w-full rounded-xl border border-border bg-background ${onClick ? "cursor-crosshair" : ""}`}
+      className={`w-full overflow-visible rounded-xl border border-border bg-background ${onClick ? "cursor-crosshair" : ""}`}
       onClick={handle}
     >
       {gridLines}
