@@ -41,12 +41,19 @@ export function TeacherLayout({
   children: ReactNode;
   showCreate?: boolean;
 }) {
-  const { teacher, authReady, logout, createLesson } = useStore();
+  const { teacher, authReady, sessionUserId, logout, createLesson } = useStore();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (authReady && !teacher) {
+  if (!authReady || (sessionUserId && !teacher)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+  if (!teacher) {
     if (typeof window !== "undefined") window.location.href = "/login";
     return null;
   }
