@@ -472,7 +472,7 @@ function CoordWidget({
             onClick={() => { setTool(t); setScratch([]); }}
             className={cn("rounded-md border px-2 py-1 text-xs capitalize", tool === t ? "border-primary bg-primary/10 text-primary" : "border-border")}
           >
-            {t}
+            {t === "halfplane" ? "shade" : t === "circle2" ? "circle (diameter)" : t}
           </button>
         ))}
         <Button size="sm" variant="ghost" disabled={disabled || shapes.length === 0} onClick={() => { onChange([]); setScratch([]); }}>
