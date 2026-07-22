@@ -783,15 +783,18 @@ function QuestionCard({
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-lg font-medium">
+        <p className="flex-1 text-lg font-medium">
           {question}
           {required && <span className="ml-1 text-destructive" aria-label="required">*</span>}
         </p>
-        {required && (
-          <span className="shrink-0 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
-            Required
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {question && <SpeakButton text={question} />}
+          {required && (
+            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-destructive">
+              Required
+            </span>
+          )}
+        </div>
       </div>
       <div className="mt-4">{children}</div>
       {footer}
