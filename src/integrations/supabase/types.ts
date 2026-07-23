@@ -113,6 +113,7 @@ export type Database = {
       submissions: {
         Row: {
           answers: Json
+          archived: boolean
           auto_score: number | null
           auto_total: number | null
           feedback: Json
@@ -128,6 +129,7 @@ export type Database = {
         }
         Insert: {
           answers?: Json
+          archived?: boolean
           auto_score?: number | null
           auto_total?: number | null
           feedback?: Json
@@ -143,6 +145,7 @@ export type Database = {
         }
         Update: {
           answers?: Json
+          archived?: boolean
           auto_score?: number | null
           auto_total?: number | null
           feedback?: Json
