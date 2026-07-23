@@ -49,6 +49,7 @@ interface StoreContext {
     },
   ) => Promise<void>;
   deleteSubmission: (id: string) => Promise<void>;
+  archiveSubmission: (id: string, archived: boolean) => Promise<void>;
 }
 
 const Ctx = createContext<StoreContext | null>(null);
