@@ -1,0 +1,1 @@
+CREATE POLICY "Students update own submissions archived" ON public.submissions FOR UPDATE USING (student_id = auth.uid()) WITH CHECK (student_id = auth.uid());
