@@ -36,6 +36,7 @@ interface SubmissionRow {
   feedback: unknown;
   submitted_at: string;
   graded_at: string | null;
+  archived?: boolean;
 }
 
 export function rowToLesson(row: LessonRow): Lesson {
