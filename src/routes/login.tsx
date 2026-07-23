@@ -8,6 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useStore } from "@/lib/store";
 import { supabase } from "@/integrations/supabase/client";
+import questlyAd from "@/assets/questly-ad.mp4.asset.json";
+import { Volume2, VolumeX } from "lucide-react";
+import { useRef } from "react";
 
 
 export const Route = createFileRoute("/login")({
