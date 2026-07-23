@@ -75,4 +75,5 @@ export interface Submission {
   feedback: Record<string, { score?: number; comment?: string; excused?: boolean }>;
   submittedAt: number;
   gradedAt: number | null;
+  archived: boolean;
 }
