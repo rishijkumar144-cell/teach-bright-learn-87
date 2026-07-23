@@ -365,6 +365,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       getLesson,
       gradeSubmission,
       deleteSubmission,
+      archiveSubmission,
     ],
   );
 
