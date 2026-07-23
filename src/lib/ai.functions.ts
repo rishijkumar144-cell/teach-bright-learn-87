@@ -374,8 +374,9 @@ export const analyzeMyProgress = createServerFn({ method: "POST" })
 
     const { data: subs, error: sErr } = await supabase
       .from("submissions")
-      .select("id, lesson_id, answers, submitted_at, student_name")
+      .select("id, lesson_id, answers, submitted_at, student_name, archived")
       .eq("student_id", userId)
+      .eq("archived", false)
       .order("submitted_at", { ascending: false });
     if (sErr) throw new Error(sErr.message);
     if (!subs || subs.length === 0) {
