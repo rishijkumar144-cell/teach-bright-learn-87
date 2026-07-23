@@ -36,6 +36,7 @@ interface SubmissionRow {
   feedback: unknown;
   submitted_at: string;
   graded_at: string | null;
+  archived?: boolean;
 }
 
 export function rowToLesson(row: LessonRow): Lesson {
@@ -97,6 +98,7 @@ export function rowToSubmission(row: SubmissionRow): Submission {
     feedback: (row.feedback as Record<string, { score?: number; comment?: string }>) ?? {},
     submittedAt: new Date(row.submitted_at).getTime(),
     gradedAt: row.graded_at ? new Date(row.graded_at).getTime() : null,
+    archived: !!row.archived,
   };
 }
 

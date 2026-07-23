@@ -49,6 +49,7 @@ interface StoreContext {
     },
   ) => Promise<void>;
   deleteSubmission: (id: string) => Promise<void>;
+  archiveSubmission: (id: string, archived: boolean) => Promise<void>;
 }
 
 const Ctx = createContext<StoreContext | null>(null);
@@ -305,6 +306,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (error) toast.error(error.message);
   }, []);
 
+  const archiveSubmission = useCallback(async (id: string, archived: boolean) => {
+    setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, archived } : s)));
+    const { error } = await supabase
+      .from("submissions")
+      .update({ archived } as never)
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      setSubmissions((prev) => prev.map((s) => (s.id === id ? { ...s, archived: !archived } : s)));
+    }
+  }, []);
+
   const value = useMemo<StoreContext>(
     () => ({
       hydrated,
@@ -328,6 +341,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       getLesson,
       gradeSubmission,
       deleteSubmission,
+      archiveSubmission,
     }),
     [
       hydrated,
@@ -351,6 +365,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       getLesson,
       gradeSubmission,
       deleteSubmission,
+      archiveSubmission,
     ],
   );
 
