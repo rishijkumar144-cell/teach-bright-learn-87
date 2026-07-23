@@ -1,6 +1,6 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Sequence } from "remotion";
-import { TransitionSeries, springTiming } from "@remotion/transitions";
-import { fade } from "@remotion/transitions/fade";
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { slide } from "@remotion/transitions/slide";
 import { loadFont as loadDisplay } from "@remotion/google-fonts/PlusJakartaSans";
 import { loadFont as loadBody } from "@remotion/google-fonts/Inter";
 import { Scene1 } from "./scenes/Scene1";
