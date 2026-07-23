@@ -216,8 +216,9 @@ function OpenLessonTab() {
 // Completed lessons
 // ============================================================
 function CompletedTab() {
-  const { submissions } = useStore();
+  const { submissions, archiveSubmission } = useStore();
   const [lessons, setLessons] = useState<Record<string, Lesson>>({});
+  const [view, setView] = useState<"active" | "archived">("active");
 
   useEffect(() => {
     const ids = Array.from(new Set(submissions.map((s) => s.lessonId)));
@@ -233,65 +234,97 @@ function CompletedTab() {
     })();
   }, [submissions]);
 
-  if (submissions.length === 0) {
-    return (
-      <Card className="p-10 text-center">
-        <BookOpen className="mx-auto h-10 w-10 text-muted-foreground" />
-        <h3 className="mt-3 text-lg font-semibold">No completed lessons yet</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Open a lesson from your teacher to get started.
-        </p>
-      </Card>
-    );
-  }
+  const active = submissions.filter((s) => !s.archived);
+  const archived = submissions.filter((s) => s.archived);
+  const list = view === "active" ? active : archived;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {submissions.map((s) => {
-        const lesson = lessons[s.lessonId];
-        const auto = s.autoTotal ? `${s.autoScore}/${s.autoTotal}` : "—";
-        const manual = s.manualTotal != null && s.manualScore != null
-          ? `${((s.manualScore / Math.max(s.manualTotal, 1)) * 100).toFixed(0)}%`
-          : null;
-        return (
-          <Card key={s.id} className="p-5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <h3 className="truncate text-base font-bold">{lesson?.title ?? "Lesson"}</h3>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {lesson?.subject || "Lesson"} · {formatDistanceToNow(s.submittedAt, { addSuffix: true })}
-                </p>
-              </div>
-              <Badge variant={s.gradedAt ? "default" : "secondary"}>
-                {s.gradedAt ? "Graded" : "Submitted"}
-              </Badge>
-            </div>
-            <div className="mt-3 flex items-center gap-3 text-sm">
-              <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span className="text-muted-foreground">Auto</span>
-                <span className="font-semibold">{auto}</span>
-              </div>
-              {manual && (
-                <div className="flex items-center gap-1.5">
-                  <Trophy className="h-4 w-4 text-primary" />
-                  <span className="text-muted-foreground">Grade</span>
-                  <span className="font-semibold">{manual}</span>
+    <div className="space-y-4">
+      <Tabs value={view} onValueChange={(v) => setView(v as "active" | "archived")}>
+        <TabsList>
+          <TabsTrigger value="active">Active ({active.length})</TabsTrigger>
+          <TabsTrigger value="archived">Archived ({archived.length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {list.length === 0 ? (
+        <Card className="p-10 text-center">
+          <BookOpen className="mx-auto h-10 w-10 text-muted-foreground" />
+          <h3 className="mt-3 text-lg font-semibold">
+            {view === "active" ? "No completed lessons yet" : "Nothing archived"}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {view === "active"
+              ? "Open a lesson from your teacher to get started."
+              : "Archived lessons will appear here and won't be included in the analyzer."}
+          </p>
+        </Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {list.map((s) => {
+            const lesson = lessons[s.lessonId];
+            const auto = s.autoTotal ? `${s.autoScore}/${s.autoTotal}` : "—";
+            const manual =
+              s.manualTotal != null && s.manualScore != null
+                ? `${((s.manualScore / Math.max(s.manualTotal, 1)) * 100).toFixed(0)}%`
+                : null;
+            return (
+              <Card key={s.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-base font-bold">{lesson?.title ?? "Lesson"}</h3>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {lesson?.subject || "Lesson"} · {formatDistanceToNow(s.submittedAt, { addSuffix: true })}
+                    </p>
+                  </div>
+                  <Badge variant={s.gradedAt ? "default" : "secondary"}>
+                    {s.gradedAt ? "Graded" : "Submitted"}
+                  </Badge>
                 </div>
-              )}
-            </div>
-            {lesson && (
-              <Link
-                to="/lesson/$slug"
-                params={{ slug: lesson.slug }}
-                className="mt-3 inline-flex items-center text-xs font-semibold text-primary hover:underline"
-              >
-                Revisit lesson <ArrowRight className="ml-1 h-3 w-3" />
-              </Link>
-            )}
-          </Card>
-        );
-      })}
+                <div className="mt-3 flex items-center gap-3 text-sm">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span className="text-muted-foreground">Auto</span>
+                    <span className="font-semibold">{auto}</span>
+                  </div>
+                  {manual && (
+                    <div className="flex items-center gap-1.5">
+                      <Trophy className="h-4 w-4 text-primary" />
+                      <span className="text-muted-foreground">Grade</span>
+                      <span className="font-semibold">{manual}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  {lesson ? (
+                    <Link
+                      to="/lesson/$slug"
+                      params={{ slug: lesson.slug }}
+                      className="inline-flex items-center text-xs font-semibold text-primary hover:underline"
+                    >
+                      Revisit lesson <ArrowRight className="ml-1 h-3 w-3" />
+                    </Link>
+                  ) : <span />}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      archiveSubmission(s.id, !s.archived);
+                      toast.success(s.archived ? "Unarchived" : "Archived");
+                    }}
+                  >
+                    {s.archived ? (
+                      <><ArchiveRestore className="mr-1.5 h-3.5 w-3.5" /> Unarchive</>
+                    ) : (
+                      <><Archive className="mr-1.5 h-3.5 w-3.5" /> Archive</>
+                    )}
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
