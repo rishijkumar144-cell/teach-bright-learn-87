@@ -1,6 +1,6 @@
 import { AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, spring, Sequence } from "remotion";
-import { TransitionSeries, springTiming } from "@remotion/transitions";
-import { fade } from "@remotion/transitions/fade";
+import { TransitionSeries, linearTiming } from "@remotion/transitions";
+import { slide } from "@remotion/transitions/slide";
 import { loadFont as loadDisplay } from "@remotion/google-fonts/PlusJakartaSans";
 import { loadFont as loadBody } from "@remotion/google-fonts/Inter";
 import { Scene1 } from "./scenes/Scene1";
@@ -48,19 +48,19 @@ export const MainVideo = () => {
         <TransitionSeries.Sequence durationInFrames={180}>
           <Scene1 />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 20 })} />
+        <TransitionSeries.Transition presentation={slide({ direction: "from-right" })} timing={linearTiming({ durationInFrames: 25 })} />
         <TransitionSeries.Sequence durationInFrames={180}>
           <Scene2 />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 20 })} />
+        <TransitionSeries.Transition presentation={slide({ direction: "from-right" })} timing={linearTiming({ durationInFrames: 25 })} />
         <TransitionSeries.Sequence durationInFrames={180}>
           <Scene3 />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 20 })} />
+        <TransitionSeries.Transition presentation={slide({ direction: "from-right" })} timing={linearTiming({ durationInFrames: 25 })} />
         <TransitionSeries.Sequence durationInFrames={180}>
           <Scene4 />
         </TransitionSeries.Sequence>
-        <TransitionSeries.Transition presentation={fade()} timing={springTiming({ config: { damping: 200 }, durationInFrames: 20 })} />
+        <TransitionSeries.Transition presentation={slide({ direction: "from-right" })} timing={linearTiming({ durationInFrames: 25 })} />
         <TransitionSeries.Sequence durationInFrames={240}>
           <Scene5 />
         </TransitionSeries.Sequence>
