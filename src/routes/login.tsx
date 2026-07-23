@@ -80,47 +80,44 @@ function LoginPage() {
 
   return (
     <div className="grid min-h-screen bg-background lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden bg-gradient-to-br from-primary via-primary to-[oklch(0.45_0.2_290)] lg:block">
-        <div className="absolute inset-0 opacity-30 [background-image:radial-gradient(circle_at_20%_20%,white_1px,transparent_1px),radial-gradient(circle_at_80%_60%,white_1px,transparent_1px)] [background-size:40px_40px]" />
-        <div className="relative flex h-full flex-col justify-between p-12 text-primary-foreground">
+      <div className="relative hidden overflow-hidden bg-black lg:block">
+        <video
+          ref={videoRef}
+          src={questlyAd.url}
+          autoPlay
+          loop
+          muted={muted}
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+        <div className="relative flex h-full flex-col justify-between p-8 text-white">
           <div className="flex items-center gap-2 text-lg font-bold">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/15 backdrop-blur">
               <GraduationCap className="h-5 w-5" />
             </div>
             Questly
           </div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h1 className="text-4xl font-bold leading-tight tracking-tight">
-              Build math lessons every learner can access.
-            </h1>
-            <p className="mt-4 max-w-md text-lg text-primary-foreground/80">
-              Design interactive lessons, publish with a single link, and support students
-              with ADHD, dyslexia, and every learning style.
-            </p>
-            <div className="mt-8 space-y-3 text-sm">
-              {[
-                "Drag-and-drop lesson builder",
-                "Real backend — student submissions save automatically",
-                "Grade open-ended answers with feedback",
-              ].map((t) => (
-                <div key={t} className="flex items-center gap-3">
-                  <div className="grid h-6 w-6 place-items-center rounded-full bg-white/20">
-                    <Sparkles className="h-3.5 w-3.5" />
-                  </div>
-                  <span>{t}</span>
-                </div>
-              ))}
+          <div className="flex items-end justify-between">
+            <div className="text-xs text-white/70">
+              © {new Date().getFullYear()} Questly. Made for teachers.
             </div>
-          </motion.div>
-          <div className="text-xs text-primary-foreground/60">
-            © {new Date().getFullYear()} Questly. Made for teachers.
+            <button
+              type="button"
+              onClick={() => {
+                const next = !muted;
+                setMuted(next);
+                if (videoRef.current) videoRef.current.muted = next;
+              }}
+              aria-label={muted ? "Unmute ad" : "Mute ad"}
+              className="grid h-11 w-11 place-items-center rounded-full bg-white/15 text-white backdrop-blur transition hover:bg-white/25"
+            >
+              {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+            </button>
           </div>
         </div>
       </div>
+
 
       <div className="flex items-center justify-center px-6 py-12 sm:px-12">
         <motion.div
