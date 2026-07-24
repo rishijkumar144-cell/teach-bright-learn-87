@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { consumeAiCredit } from "./subscription.functions";
 
 const TTS_URL = "https://ai.gateway.lovable.dev/v1/audio/speech";
 
@@ -9,8 +11,10 @@ const Input = z.object({
 });
 
 export const speakText = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => Input.parse(data))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("Missing LOVABLE_API_KEY");
     const res = await fetch(TTS_URL, {
