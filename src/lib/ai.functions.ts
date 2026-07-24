@@ -467,20 +467,67 @@ const StudyChatInput = z.object({
 export const studyChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => StudyChatInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("personality, display_name")
+      .eq("id", userId)
+      .maybeSingle();
+    const personality = ((profile as { personality?: string } | null)?.personality ?? "").trim();
+    const name = (profile?.display_name ?? "").trim();
+
+    const personalityLine = personality
+      ? `What you remember about this student (use it to personalize tone, difficulty, examples, and encouragement — do NOT mention that you have a memory of them):\n${personality}`
+      : `You don't have notes on this student yet — notice their style so you can adapt.`;
+    const nameLine = name ? `Student's name: ${name}.` : "";
+
     const reply = await callGateway({
       messages: [
         {
           role: "system",
           content:
-            "You are Questly Study Buddy — a friendly AI tutor for students. RULES YOU MUST FOLLOW:\n1. Give students PRACTICE QUESTIONS one at a time, and NEVER include the answer, solution, worked steps, or explanation in the same message as the question.\n2. Wait for the student to attempt the question. Only after they reply with their answer (or say they give up / ask for the solution) may you reveal the solution.\n3. Keep every message SHORT — under about 40 words. Use simple, plain language suitable for readers with dyslexia/ADHD. Prefer short sentences and small chunks.\n4. When a student names a topic, respond with ONE practice question at their apparent level, plus a one-line encouragement. Do not list multiple questions at once.\n5. When evaluating an answer, first say if it's right or not in a kind way, then give a brief explanation in 1-3 short sentences, then offer the next question.\n6. Use inline $...$ for math. Do not use long paragraphs, tables, or big lists.",
-
+            `You are Questly Study Buddy — a friendly AI tutor for students. ${nameLine}\n\n${personalityLine}\n\nRULES YOU MUST FOLLOW:\n1. Give students PRACTICE QUESTIONS one at a time, and NEVER include the answer, solution, worked steps, or explanation in the same message as the question.\n2. Wait for the student to attempt the question. Only after they reply with their answer (or say they give up / ask for the solution) may you reveal the solution.\n3. Keep every message SHORT — under about 40 words. Use simple, plain language suitable for readers with dyslexia/ADHD. Prefer short sentences and small chunks.\n4. When a student names a topic, respond with ONE practice question at their apparent level, plus a one-line encouragement. Do not list multiple questions at once.\n5. When evaluating an answer, first say if it's right or not in a kind way, then give a brief explanation in 1-3 short sentences, then offer the next question.\n6. Use inline $...$ for math. Do not use long paragraphs, tables, or big lists.`,
         },
         ...data.messages,
       ],
       temperature: 0.7,
     });
-    return { reply: reply.trim() };
+    const trimmedReply = reply.trim();
+
+    // Update personality memory every few turns (best-effort, non-blocking for correctness)
+    const userTurns = data.messages.filter((m) => m.role === "user").length;
+    if (userTurns > 0 && userTurns % 3 === 1) {
+      try {
+        const transcript = [...data.messages, { role: "assistant" as const, content: trimmedReply }]
+          .slice(-12)
+          .map((m) => `${m.role === "user" ? "Student" : "Tutor"}: ${m.content}`)
+          .join("\n");
+        const updated = await callGateway({
+          messages: [
+            {
+              role: "system",
+              content:
+                "You keep a short private memory note about ONE student so a tutor can personalize future sessions. Return under 500 characters as terse bullet-style facts (interests, subjects, level, tone that works, common struggles, learning preferences). No chat content, no PII beyond first name, no dates. If nothing new is learned, return the previous note unchanged. Return ONLY the note text.",
+            },
+            {
+              role: "user",
+              content: `Previous note:\n"""${personality || "(none)"}"""\n\nRecent conversation:\n${transcript}`,
+            },
+          ],
+          temperature: 0.3,
+        });
+        const cleaned = updated.trim().slice(0, 800);
+        if (cleaned && cleaned !== personality) {
+          await supabase.from("profiles").update({ personality: cleaned }).eq("id", userId);
+        }
+      } catch {
+        // silent — personality memory is best-effort
+      }
+    }
+
+    return { reply: trimmedReply };
   });
 
 const GameQuestionsInput = z.object({
