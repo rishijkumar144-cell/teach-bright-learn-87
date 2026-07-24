@@ -545,7 +545,8 @@ const GameQuestionsInput = z.object({
 export const generateGameQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GameQuestionsInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const result = await callJson<{ questions: { q: string; a?: string; answers?: string[] }[] }>(
       "You generate flashcard-style study questions for students. Keep each question short (under 100 chars) and each accepted answer to a single fact, number, or short phrase (under 60 chars). Use inline $...$ for math. When a question legitimately has multiple correct answers (synonyms, equivalent forms like '1/2' and '0.5', alternate spellings, or genuinely multiple valid solutions), include ALL of them in the answers array. If only one answer is correct, still return it as a single-element array.",
       `Generate ${data.count} short study Q&A pairs about: ${data.topic}. Mix easy and medium difficulty. For each question, return an "answers" array containing every acceptable correct answer.`,
