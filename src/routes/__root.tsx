@@ -159,6 +159,7 @@ function RootComponent() {
       <AccessibilityProvider>
         <StoreProvider>
           <AccessibilityToolbar />
+          <div className="fixed top-3 right-3 z-40"><CreditMeter /></div>
           <Outlet />
           <Toaster richColors position="top-right" />
         </StoreProvider>
