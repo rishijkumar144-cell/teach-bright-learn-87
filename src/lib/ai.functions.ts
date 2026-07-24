@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { consumeAiCredit } from "./subscription.functions";
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const MODEL = "google/gemini-3-flash-preview";
@@ -66,7 +67,8 @@ const GenerateInput = z.object({
 export const generateBlockContent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GenerateInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const audience = [data.subject, data.gradeLevel].filter(Boolean).join(", ");
     const audienceLine = audience ? `Target audience: ${audience}.` : "";
     const contextLine = data.context ? `Existing lesson context: """${data.context}"""` : "";
@@ -219,7 +221,9 @@ export const generateStudentInsights = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InsightsInput.parse(input))
   .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const { supabase, userId } = context;
+
 
     // Load all lessons owned by this teacher
     const { data: lessons, error: lErr } = await supabase
@@ -370,6 +374,7 @@ export const analyzeMyProgress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(() => ({}))
   .handler(async ({ context }) => {
+    await consumeAiCredit(context);
     const { supabase, userId } = context;
 
     const { data: subs, error: sErr } = await supabase
@@ -468,6 +473,7 @@ export const studyChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => StudyChatInput.parse(input))
   .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const { supabase, userId } = context;
 
     const { data: profile } = await supabase
@@ -539,7 +545,8 @@ const GameQuestionsInput = z.object({
 export const generateGameQuestions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GameQuestionsInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const result = await callJson<{ questions: { q: string; a?: string; answers?: string[] }[] }>(
       "You generate flashcard-style study questions for students. Keep each question short (under 100 chars) and each accepted answer to a single fact, number, or short phrase (under 60 chars). Use inline $...$ for math. When a question legitimately has multiple correct answers (synonyms, equivalent forms like '1/2' and '0.5', alternate spellings, or genuinely multiple valid solutions), include ALL of them in the answers array. If only one answer is correct, still return it as a single-element array.",
       `Generate ${data.count} short study Q&A pairs about: ${data.topic}. Mix easy and medium difficulty. For each question, return an "answers" array containing every acceptable correct answer.`,

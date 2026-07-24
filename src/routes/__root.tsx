@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { StoreProvider } from "../lib/store";
 import { AccessibilityProvider, AccessibilityToolbar } from "@/components/AccessibilityToolbar";
+import { CreditMeter } from "@/components/CreditMeter";
 import { installGlobalClickSfx, sfx } from "@/lib/sfx";
 import { toast } from "sonner";
 
@@ -158,6 +159,7 @@ function RootComponent() {
       <AccessibilityProvider>
         <StoreProvider>
           <AccessibilityToolbar />
+          <div className="fixed top-3 right-3 z-40"><CreditMeter /></div>
           <Outlet />
           <Toaster richColors position="top-right" />
         </StoreProvider>

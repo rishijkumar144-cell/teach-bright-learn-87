@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as StudentsRouteImport } from './routes/students'
 import { Route as StudentRouteImport } from './routes/student'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -21,6 +22,11 @@ import { Route as LessonsIndexRouteImport } from './routes/lessons.index'
 import { Route as LessonsIdRouteImport } from './routes/lessons.$id'
 import { Route as LessonSlugRouteImport } from './routes/lesson.$slug'
 
+const UpgradeRoute = UpgradeRouteImport.update({
+  id: '/upgrade',
+  path: '/upgrade',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StudentsRoute = StudentsRouteImport.update({
   id: '/students',
   path: '/students',
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/student': typeof StudentRoute
   '/students': typeof StudentsRoute
+  '/upgrade': typeof UpgradeRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
   '/lessons/': typeof LessonsIndexRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/student': typeof StudentRoute
   '/students': typeof StudentsRoute
+  '/upgrade': typeof UpgradeRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
   '/lessons': typeof LessonsIndexRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/student': typeof StudentRoute
   '/students': typeof StudentsRoute
+  '/upgrade': typeof UpgradeRoute
   '/lesson/$slug': typeof LessonSlugRoute
   '/lessons/$id': typeof LessonsIdRoute
   '/lessons/': typeof LessonsIndexRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/student'
     | '/students'
+    | '/upgrade'
     | '/lesson/$slug'
     | '/lessons/$id'
     | '/lessons/'
@@ -141,6 +151,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/student'
     | '/students'
+    | '/upgrade'
     | '/lesson/$slug'
     | '/lessons/$id'
     | '/lessons'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/student'
     | '/students'
+    | '/upgrade'
     | '/lesson/$slug'
     | '/lessons/$id'
     | '/lessons/'
@@ -168,6 +180,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   StudentRoute: typeof StudentRoute
   StudentsRoute: typeof StudentsRoute
+  UpgradeRoute: typeof UpgradeRoute
   LessonSlugRoute: typeof LessonSlugRoute
   LessonsIdRoute: typeof LessonsIdRoute
   LessonsIndexRoute: typeof LessonsIndexRoute
@@ -175,6 +188,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/upgrade': {
+      id: '/upgrade'
+      path: '/upgrade'
+      fullPath: '/upgrade'
+      preLoaderRoute: typeof UpgradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/students': {
       id: '/students'
       path: '/students'
@@ -264,6 +284,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   StudentRoute: StudentRoute,
   StudentsRoute: StudentsRoute,
+  UpgradeRoute: UpgradeRoute,
   LessonSlugRoute: LessonSlugRoute,
   LessonsIdRoute: LessonsIdRoute,
   LessonsIndexRoute: LessonsIndexRoute,
