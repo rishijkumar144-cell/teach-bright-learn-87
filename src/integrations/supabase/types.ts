@@ -85,29 +85,38 @@ export type Database = {
       }
       profiles: {
         Row: {
+          ai_credits_used: number
+          ai_credits_week_start: string
           created_at: string
           display_name: string
           email: string
           id: string
           personality: string
+          plus_until: string | null
           school: string
           updated_at: string
         }
         Insert: {
+          ai_credits_used?: number
+          ai_credits_week_start?: string
           created_at?: string
           display_name?: string
           email: string
           id: string
           personality?: string
+          plus_until?: string | null
           school?: string
           updated_at?: string
         }
         Update: {
+          ai_credits_used?: number
+          ai_credits_week_start?: string
           created_at?: string
           display_name?: string
           email?: string
           id?: string
           personality?: string
+          plus_until?: string | null
           school?: string
           updated_at?: string
         }
