@@ -221,7 +221,9 @@ export const generateStudentInsights = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => InsightsInput.parse(input))
   .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const { supabase, userId } = context;
+
 
     // Load all lessons owned by this teacher
     const { data: lessons, error: lErr } = await supabase
