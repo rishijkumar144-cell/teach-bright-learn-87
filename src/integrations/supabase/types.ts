@@ -89,6 +89,7 @@ export type Database = {
           display_name: string
           email: string
           id: string
+          personality: string
           school: string
           updated_at: string
         }
@@ -97,6 +98,7 @@ export type Database = {
           display_name?: string
           email: string
           id: string
+          personality?: string
           school?: string
           updated_at?: string
         }
@@ -105,6 +107,7 @@ export type Database = {
           display_name?: string
           email?: string
           id?: string
+          personality?: string
           school?: string
           updated_at?: string
         }
