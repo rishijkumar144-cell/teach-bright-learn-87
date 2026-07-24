@@ -374,6 +374,7 @@ export const analyzeMyProgress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(() => ({}))
   .handler(async ({ context }) => {
+    await consumeAiCredit(context);
     const { supabase, userId } = context;
 
     const { data: subs, error: sErr } = await supabase
