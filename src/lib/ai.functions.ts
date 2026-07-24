@@ -473,6 +473,7 @@ export const studyChat = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => StudyChatInput.parse(input))
   .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const { supabase, userId } = context;
 
     const { data: profile } = await supabase
