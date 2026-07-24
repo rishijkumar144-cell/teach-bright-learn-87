@@ -67,7 +67,8 @@ const GenerateInput = z.object({
 export const generateBlockContent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => GenerateInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    await consumeAiCredit(context);
     const audience = [data.subject, data.gradeLevel].filter(Boolean).join(", ");
     const audienceLine = audience ? `Target audience: ${audience}.` : "";
     const contextLine = data.context ? `Existing lesson context: """${data.context}"""` : "";
